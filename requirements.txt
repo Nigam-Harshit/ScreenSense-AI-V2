@@ -1,0 +1,12 @@
+pywin32
+pyautogui
+mss
+opencv-python
+numpy
+screen-brightness-control
+ultralytics
+pvporcupine
+sounddevice
+SpeechRecognition
+scikit-learn
+wandb

@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 3
+names: ['close_button', 'maximize_button', 'minimize_button']
+
+roboflow:
+  workspace: college-4p9ir
+  project: screensenseai
+  version: 2
+  license: Private
+  url: https://app.roboflow.com/college-4p9ir/screensenseai/2

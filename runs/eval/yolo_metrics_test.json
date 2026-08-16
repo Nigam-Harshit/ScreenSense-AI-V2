@@ -1,0 +1,25 @@
+{
+  "model": "models/best.pt",
+  "split": "test",
+  "mean_precision": 0.9864535584558426,
+  "mean_recall": 0.9880952380952381,
+  "map50": 0.9829518883415433,
+  "map50_95": 0.5884728901841444,
+  "per_class": {
+    "close_button": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "ap50": 0.995
+    },
+    "maximize_button": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "ap50": 0.995
+    },
+    "minimize_button": {
+      "precision": 0.9593606753675278,
+      "recall": 0.9642857142857143,
+      "ap50": 0.9588556650246303
+    }
+  }
+}

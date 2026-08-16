@@ -1,0 +1,8 @@
+{
+  "dataset": "data/intents_v2.json",
+  "k": 7,
+  "model": "all-MiniLM-L6-v2",
+  "conf_threshold": 0.43,
+  "n_train": 640,
+  "n_val": 160
+}

@@ -1,0 +1,404 @@
+{
+  "intents": [
+    {
+      "intent": "brightness_up",
+      "examples": [
+        "increase the brightness",
+        "make the screen brighter",
+        "turn up the display light",
+        "it's too dark in here brighten the screen",
+        "brightness up please",
+        "can you turn up the brightness",
+        "make it brighter",
+        "increase display brightness",
+        "bump up the screen light",
+        "I need more brightness"
+        
+      ]
+    },
+    {
+      "intent": "brightness_down",
+      "examples": [
+        "decrease the brightness",
+        "dim the screen",
+        "make the display darker",
+        "it's too bright turn it down",
+        "lower the brightness",
+        "reduce screen brightness",
+        "turn the brightness down",
+        "my eyes hurt make the screen dimmer",
+        "lower display light",
+        "make it darker"
+      ]
+    },
+    {
+      "intent": "set_brightness",
+      "examples": [
+        "set brightness to 50",
+        "change the display brightness to 80",
+        "make brightness exactly 30",
+        "put screen brightness at 100",
+        "adjust brightness to 45",
+        "change brightness to 60",
+        "set the screen light to 75",
+        "make it 40 percent bright"
+      ]
+    },
+    {
+      "intent": "volume_up",
+      "examples": [
+        "increase the volume",
+        "make it louder",
+        "turn up the sound",
+        "volume up",
+        "I can't hear it make it louder",
+        "turn the volume up",
+        "increase the audio",
+        "bump the sound up",
+        "more volume please",
+        "raise the volume"
+      ]
+    },
+    {
+      "intent": "volume_down",
+      "examples": [
+        "decrease the volume",
+        "make it quieter",
+        "turn down the sound",
+        "volume down please",
+        "it's too loud lower the volume",
+        "reduce the audio",
+        "lower the sound",
+        "turn the volume down",
+        "less volume",
+        "quiet down the sound"
+      ]
+    },
+    {
+      "intent": "set_volume",
+      "examples": [
+        "set volume to 50",
+        "change the volume to 20",
+        "put sound at 100",
+        "adjust volume to 35",
+        "make the volume exactly 80",
+        "change audio level to 60",
+        "set the sound to 45 percent"
+      ]
+    },
+    {
+      "intent": "mute_volume",
+      "examples": [
+        "mute the volume",
+        "turn off the sound",
+        "mute please",
+        "silence the audio",
+        "stop the sound",
+        "mute audio",
+        "shut off the volume",
+        "mute speakers"
+      ]
+    },
+    {
+      "intent": "unmute_volume",
+      "examples": [
+        "unmute the volume",
+        "turn the sound back on",
+        "unmute please",
+        "restore the audio",
+        "unmute",
+        "unmute the speakers",
+        "turn sound on again"
+      ]
+    },
+    {
+      "intent": "open_app",
+      "examples": [
+        "open notepad",
+        "start calculator",
+        "launch google chrome",
+        "can you open explorer for me",
+        "run discord",
+        "open up spotify",
+        "start Microsoft Word",
+        "launch the browser",
+        "boot up paint",
+        "open application edge"
+      ]
+    },
+    {
+      "intent": "close_button",
+      "examples": [
+        "close notepad",
+        "shut down chrome",
+        "quit discord",
+        "exit this window",
+        "close the application",
+        "kill the calculator app",
+        "terminate spotify",
+        "close the active window",
+        "quit the browser"
+      ]
+    },
+    {
+      "intent": "minimize_button",
+      "examples": [
+        "minimize the screen",
+        "hide this window",
+        "minimize notepad",
+        "put this app down",
+        "minimise the browser",
+        "minimize chrome",
+        "hide the active application",
+        "shrink this window",
+        "drop the window"
+      ]
+    },
+    {
+      "intent": "maximize_button",
+      "examples": [
+        "maximize this window",
+        "make it full size",
+        "maximize chrome",
+        "expand the application",
+        "fill the screen with this window",
+        "make the window bigger",
+        "blow up the screen",
+        "maximize notepad"
+      ]
+    },
+    {
+      "intent": "split_apps",
+      "examples": [
+        "split notepad and calculator",
+        "put chrome on the left and discord on the right",
+        "split screen between explorer and edge",
+        "snap notepad and paint side by side",
+        "split apps chrome and code",
+        "split discord and spotify",
+        "side by side views of edge and word"
+      ]
+    },
+    {
+      "intent": "focus_window",
+      "examples": [
+        "focus notepad",
+        "bring chrome to the front",
+        "switch to discord",
+        "make calculator active",
+        "show me paint",
+        "active chrome",
+        "bring visual studio to focus",
+        "switch active window to edge"
+      ]
+    },
+    {
+      "intent": "move_left",
+      "examples": [
+        "move this to the left",
+        "snap window left",
+        "throw to the left monitor",
+        "put this on the left side",
+        "shift left",
+        "move the window to the left",
+        "snap my active app left"
+      ]
+    },
+    {
+      "intent": "move_right",
+      "examples": [
+        "move this to the right",
+        "snap window right",
+        "throw to the right side",
+        "put this on the right",
+        "shift right",
+        "move the current window to the right",
+        "snap it right"
+      ]
+    },
+    {
+      "intent": "move_top",
+      "examples": [
+        "move this to the top",
+        "snap window top",
+        "put the window on the top",
+        "move up to the top",
+        "shift the window up",
+        "snap to the top of the screen"
+      ]
+    },
+    {
+      "intent": "move_bottom",
+      "examples": [
+        "move this to the bottom",
+        "snap window bottom",
+        "put the window on the bottom",
+        "move down to the bottom",
+        "shift the active window down",
+        "snap to the bottom of the screen"
+      ]
+    },
+    {
+      "intent": "move_fullscreen",
+      "examples": [
+        "move this to fullscreen",
+        "make this fullscreen",
+        "fullscreen the application",
+        "put the window in fullscreen mode",
+        "go fullscreen"
+      ]
+    },
+    {
+      "intent": "screenshot",
+      "examples": [
+        "take a screenshot",
+        "capture the screen",
+        "save a picture of my screen",
+        "take a snip",
+        "screenshot this",
+        "grab the screen",
+        "snap a picture of the display",
+        "take a desktop capture"
+      ]
+    },
+    {
+      "intent": "lock_screen",
+      "examples": [
+        "lock the screen",
+        "lock my pc",
+        "secure the computer",
+        "lock it up",
+        "i'm stepping away lock screen",
+        "lock windows",
+        "lock the display"
+      ]
+    },
+    {
+      "intent": "sleep_pc",
+      "examples": [
+        "put the computer to sleep",
+        "sleep mode",
+        "go to sleep",
+        "hibernate the pc",
+        "suspend the system",
+        "sleep the computer",
+        "put my pc to rest"
+      ]
+    },
+    {
+      "intent": "scroll_down",
+      "examples": [
+        "scroll down",
+        "go down the page",
+        "page down",
+        "scroll further down",
+        "move down a bit",
+        "scroll the window down",
+        "read further down"
+      ]
+    },
+    {
+      "intent": "scroll_up",
+      "examples": [
+        "scroll up",
+        "go up the page",
+        "page up",
+        "scroll back to the top",
+        "move up",
+        "scroll the window up",
+        "scroll higher"
+      ]
+    },
+    {
+      "intent": "media_play_pause",
+      "examples": [
+        "pause the music",
+        "play the video",
+        "pause it",
+        "resume playing",
+        "play media",
+        "pause the song",
+        "play the track",
+        "stop the video temporarily"
+      ]
+    },
+    {
+      "intent": "media_next",
+      "examples": [
+        "next track",
+        "skip this song",
+        "play the next video",
+        "next please",
+        "skip track",
+        "go to the next song",
+        "next media file"
+      ]
+    },
+    {
+      "intent": "media_prev",
+      "examples": [
+        "previous track",
+        "go back to the last song",
+        "play the previous video",
+        "rewind to previous track",
+        "previous please",
+        "go back a track"
+      ]
+    },
+    {
+      "intent": "new_desktop",
+      "examples": [
+        "create a new desktop",
+        "open a new workspace",
+        "new virtual desktop",
+        "make a new screen",
+        "fresh workspace",
+        "give me a new desktop"
+      ]
+    },
+    {
+      "intent": "next_desktop",
+      "examples": [
+        "switch to next desktop",
+        "go to the right workspace",
+        "next desktop please",
+        "move to the other desktop",
+        "change to right screen",
+        "go to my next virtual desktop"
+      ]
+    },
+    {
+      "intent": "prev_desktop",
+      "examples": [
+        "switch to previous desktop",
+        "go to the left workspace",
+        "previous desktop please",
+        "move back a desktop",
+        "change to left screen",
+        "go to my previous virtual desktop"
+      ]
+    },
+    {
+      "intent": "close_desktop",
+      "examples": [
+        "close this desktop",
+        "delete this workspace",
+        "close virtual desktop",
+        "shut down this workspace",
+        "remove this desktop screen"
+      ]
+    },
+    {
+      "intent": "type_text",
+      "examples": [
+        "type this hello world",
+        "dictate this how are you",
+        "type out please send the file",
+        "write this down going to lunch",
+        "type i am an ai",
+        "input this into the computer",
+        "type my password"
+      ]
+    }
+  ]
+}
