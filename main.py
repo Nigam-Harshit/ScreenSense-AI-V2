@@ -82,13 +82,10 @@ def run_command(command):
         _run_action(command, action, target, confidence, route, entry)
 
 
-def _run_action(command, action, target, confidence, route, log_entry):
-
-    # VLM fallback gate — stub until Week 2
-    if confidence < CONF_THRESHOLD and action is not None:
-        print(f"[ROUTER] Low confidence ({confidence:.2f}) — VLM fallback will handle this in V2.")
-        log_entry.mark_result("low_confidence")
-        return
+def _dispatch_action(action, target, log_entry):
+    """All Routes 1 & 2 dispatch logic -- extracted from _run_action.
+    Behavior is identical to the previous inline code.
+    Do NOT modify this function for Route 3 concerns."""
 
     if action == "set_volume":
         set_volume(target)
@@ -241,6 +238,51 @@ def _run_action(command, action, target, confidence, route, log_entry):
 
     except Exception as e:
         print("Error during window interaction:", e)
+
+
+# ── Route 3: VLM fallback — _run_action orchestration ─────────────────────────
+
+def _run_action(command, action, target, confidence, route, log_entry):
+    """Routes the command through the correct handler.
+    Routes 1 & 2 go directly to _dispatch_action.
+    Route 3 (low-confidence) invokes the Gemini VLM pipeline first,
+    then dispatches the VLM-returned action through the same table."""
+
+    _pre_ss  = None   # pre-action screenshot (set only for Route 3)
+    _call_id = None   # Route 3 call ID for log correlation
+
+    # ── Route 3 gate ───────────────────────────────────────────────────────────
+    if confidence < CONF_THRESHOLD and action is not None:
+        try:
+            from vlm import route3_handle
+            action, target, _pre_ss, _call_id = route3_handle(
+                command, action, confidence, log_entry
+            )
+        except Exception as e:
+            print(f"[ROUTER] Route 3 error: {e}")
+            log_entry.mark_result("vlm_error")
+            return
+
+        if action is None:
+            log_entry.mark_result("vlm_unknown")
+            return
+
+    # ── Dispatch (Routes 1, 2, and VLM-resolved Route 3) ──────────────────────
+    try:
+        _dispatch_action(action, target, log_entry)
+    finally:
+        # Post-action verification (Route 3 only)
+        if _pre_ss is not None and _call_id is not None:
+            try:
+                from route3_config import ROUTE3_VERIFY_ENABLED
+                from route3_verify import verify_action
+                from vlm import route3_log_verification
+                if ROUTE3_VERIFY_ENABLED:
+                    outcome, change_pct = verify_action(_pre_ss)
+                    route3_log_verification(_call_id, outcome, change_pct)
+                    print(f"[Route3Verify] {outcome} ({change_pct:.1%} pixels changed)")
+            except Exception as e:
+                print(f"[Route3Verify] Non-fatal error: {e}")
 
 
 mode = input("TYPE OR VOICE? (T/V): ").strip().lower()

@@ -10,3 +10,5 @@ sounddevice
 SpeechRecognition
 scikit-learn
 wandb
+google-generativeai
+Pillow
