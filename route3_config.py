@@ -28,9 +28,16 @@ CACHE_MAX_ENTRIES = 500
 CACHE_PERSIST_PATH = "logs/route3_cache.json"
 
 # ── Screenshot verification ─────────────────────────────────────────────────────
-# Seconds to wait after action before capturing the post-action screenshot.
+# Maximum seconds to wait for UI to settle after a Route 3 action.
+# Acts as a timeout ceiling for the adaptive polling loop (not a fixed sleep).
 # Chosen: 1.5s.  PENDING TUNING — may need to increase for slow animations.
 VERIFY_DELAY_SECONDS = 1.5
+
+# Seconds between consecutive screen captures inside the polling loop.
+# Range 0.15–0.25s is the sweet spot: fast enough to detect sub-second UI
+# changes, slow enough to avoid burning CPU on redundant diffs.
+# Chosen: 0.20s.  PENDING TUNING from real traffic latency logs.
+VERIFY_POLL_INTERVAL_SECONDS = 0.20
 
 # Fraction of screen pixels that must change (per-pixel intensity delta > 10)
 # for the outcome to be classified as 'verified'.

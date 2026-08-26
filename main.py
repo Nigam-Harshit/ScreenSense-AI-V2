@@ -278,9 +278,13 @@ def _run_action(command, action, target, confidence, route, log_entry):
                 from route3_verify import verify_action
                 from vlm import route3_log_verification
                 if ROUTE3_VERIFY_ENABLED:
-                    outcome, change_pct = verify_action(_pre_ss)
-                    route3_log_verification(_call_id, outcome, change_pct)
-                    print(f"[Route3Verify] {outcome} ({change_pct:.1%} pixels changed)")
+                    outcome, change_pct, polls_taken, time_to_stable_ms = verify_action(_pre_ss)
+                    route3_log_verification(_call_id, outcome, change_pct,
+                                            polls_taken, time_to_stable_ms)
+                    stable_info = (f"{time_to_stable_ms}ms"
+                                   if time_to_stable_ms is not None else "timeout")
+                    print(f"[Route3Verify] {outcome} ({change_pct:.1%} pixels changed, "
+                          f"{polls_taken} polls, stable={stable_info})")
             except Exception as e:
                 print(f"[Route3Verify] Non-fatal error: {e}")
 

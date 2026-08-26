@@ -297,19 +297,26 @@ def route3_handle(command:     str,
     return action, target, pre_ss, call_id
 
 
-def route3_log_verification(call_id:    str,
-                             outcome:    str,
-                             change_pct: float) -> None:
+def route3_log_verification(call_id:           str,
+                             outcome:           str,
+                             change_pct:        float,
+                             polls_taken:       int  | None = None,
+                             time_to_stable_ms: int  | None = None) -> None:
     """
     Write the post-dispatch verification log entry.
     Called from _run_action in main.py after the action completes.
     Never raises.
+
+    polls_taken       : total poll iterations from verify_action()
+    time_to_stable_ms : ms to stable-diff detection, or None on timeout
     """
     try:
         get_route3_logger().log_verification(
             call_id              = call_id,
             verification_outcome = outcome,
             change_pct           = change_pct,
+            polls_taken          = polls_taken,
+            time_to_stable_ms    = time_to_stable_ms,
         )
     except Exception as e:
         print(f"[VLM] Verification log error (non-fatal): {e}")

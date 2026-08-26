@@ -79,8 +79,15 @@ class Route3Logger:
     def log_verification(self, *,
                          call_id:              str,
                          verification_outcome: str,
-                         change_pct:           float) -> None:
-        """Log the post-action verification outcome (after dispatch)."""
+                         change_pct:           float,
+                         polls_taken:          int  | None = None,
+                         time_to_stable_ms:    int  | None = None) -> None:
+        """Log the post-action verification outcome (after dispatch).
+
+        polls_taken       : total poll iterations the adaptive loop executed
+        time_to_stable_ms : ms from action dispatch to stable-diff detection,
+                            or None when the loop timed out without stabilising
+        """
         entry = {
             "type":                 "verification",
             "timestamp":            datetime.now(timezone.utc).isoformat(),
@@ -88,6 +95,8 @@ class Route3Logger:
             "verification_outcome": verification_outcome,
             "change_pct":           round(float(change_pct), 4),
         }
+        if polls_taken       is not None: entry["polls_taken"]        = int(polls_taken)
+        if time_to_stable_ms is not None: entry["time_to_stable_ms"]  = int(time_to_stable_ms)
         self._write(entry)
 
     def read_today(self) -> list[dict]:
