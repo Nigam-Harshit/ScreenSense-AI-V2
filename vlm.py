@@ -21,7 +21,9 @@ Dependencies introduced:
   All others (mss, cv2, sentence-transformers) already in the project.
 
 API key: read from GEMINI_API_KEY environment variable or .env file.
-If the key is missing, Route 3 falls back to the NLP hint action (no crash).
+If the key is missing, Route 3 logs the failure distinctly (error='gemini_key_missing')
+and falls back to dispatching the NLP hint — the session continues, but the console
+prints a loud warning so the user knows VLM is NOT running.
 """
 
 import os
@@ -118,9 +120,9 @@ def _call_gemini(command:     str,
 
     api_key = _load_api_key()
     if not api_key:
-        msg = "GEMINI_API_KEY not set — using NLP hint as Route 3 fallback"
-        print(f"[VLM] {msg}")
-        return action_hint, None, msg, 0.0, 0.0
+        # Return a sentinel tuple that route3_handle can detect and log distinctly.
+        # Caller must NOT pass vlm_confidence from this path to the log — use None.
+        return None, None, "gemini_key_missing", None, 0.0
 
     try:
         import google.generativeai as genai
@@ -262,6 +264,32 @@ def route3_handle(command:     str,
             command, action_hint, confidence, pre_ss
         )
         latency_ms = (time.perf_counter() - t_start) * 1000
+
+        # Detect the key-missing sentinel from _call_gemini
+        if reasoning == "gemini_key_missing":
+            print(
+                "\n" + "!" * 60 + "\n"
+                "[Route 3] WARNING: GEMINI_API_KEY is not set.\n"
+                "          VLM is NOT running — NLP hint dispatched as fallback.\n"
+                "          Set GEMINI_API_KEY in your .env file to enable Route 3.\n"
+                "!" * 60 + "\n"
+            )
+            # Log the invocation with a distinct error marker and null confidence
+            logger.log_invocation(
+                call_id        = call_id,
+                command        = command,
+                action_hint    = action_hint,
+                confidence     = confidence,
+                screen_hash    = screen_hash,
+                cache_hit      = False,
+                action_taken   = action_hint,   # best-effort NLP hint
+                target_taken   = None,
+                reasoning      = "gemini_key_missing",
+                vlm_confidence = None,           # null — not a real VLM response
+                latency_ms     = latency_ms,
+                error          = "gemini_key_missing",
+            )
+            return action_hint, None, pre_ss, call_id
 
         # Store in cache if the action is real (not 'unknown')
         if ROUTE3_CACHE_ENABLED and action not in (None, "unknown"):

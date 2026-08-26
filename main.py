@@ -20,7 +20,8 @@ import time
 from nlp import parse_command, CONF_THRESHOLD
 from window_manager import find_window, get_window_rect
 from vision import detect_buttons
-from voice_pipeline import voice_loop
+# voice_pipeline is imported lazily inside the voice branch below
+# so that text-mode users never load pvporcupine (Task 3 fix).
 from command_logger import CommandLogger
 
 _logger = CommandLogger()
@@ -293,7 +294,9 @@ mode = input("TYPE OR VOICE? (T/V): ").strip().lower()
 
 
 if mode == "v":
-
+    # Lazy import: pvporcupine is only evaluated when voice mode is chosen.
+    # Text-mode users can run with pvporcupine uninstalled or key invalid.
+    from voice_pipeline import voice_loop
     voice_loop(run_command)
 
 else:

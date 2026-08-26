@@ -1,18 +1,39 @@
+"""
+voice_pipeline.py  --  Wake-word loop + voice command dispatch.
+
+Uses pvporcupine for wake-word detection ("jarvis") and voice.listen()
+for STT after activation.  All tuning constants are in voice_config.py.
+
+Porcupine access key must be set in .env as PORCUPINE_ACCESS_KEY.
+"""
+
 import pvporcupine
 import sounddevice as sd
 import struct
 import time
+
 from voice import listen
+from voice_config import (
+    WAKE_KEYWORD,
+    VOICE_ACTIVATION_TIMEOUT_SECONDS,
+    AUDIO_CHANNELS,
+    load_porcupine_key,
+)
 
-ACCESS_KEY = "DGVosSJONibo052lrjN4iMeO/PJqvTR4NBtvVVv5nNU/w3uV/OrsVA=="
-
-activation_timeout = 12
 
 def voice_loop(run_command):
 
+    access_key = load_porcupine_key()
+    if not access_key:
+        raise RuntimeError(
+            "[Voice] PORCUPINE_ACCESS_KEY is not set.\n"
+            "        Add it to your .env file:  PORCUPINE_ACCESS_KEY=your_key_here\n"
+            "        Or run in text mode (T) instead."
+        )
+
     porcupine = pvporcupine.create(
-        access_key="DGVosSJONibo052lrjN4iMeO/PJqvTR4NBtvVVv5nNU/w3uV/OrsVA==",
-        keywords=["jarvis"]
+        access_key=access_key,
+        keywords=[WAKE_KEYWORD],
     )
 
     mode = "wake"
@@ -37,7 +58,7 @@ def voice_loop(run_command):
 
         elif mode == "command":
 
-            if time.time() - last_command_time > activation_timeout:
+            if time.time() - last_command_time > VOICE_ACTIVATION_TIMEOUT_SECONDS:
                 print("Returning to wake mode...")
                 mode = "wake"
                 return
@@ -46,8 +67,8 @@ def voice_loop(run_command):
         samplerate=porcupine.sample_rate,
         blocksize=porcupine.frame_length,
         dtype="int16",
-        channels=1,
-        callback=audio_callback
+        channels=AUDIO_CHANNELS,
+        callback=audio_callback,
     )
     stream.start()
 
@@ -57,12 +78,12 @@ def voice_loop(run_command):
             if mode == "command":
 
                 stream.stop()
-                
+
                 command = listen()
 
                 if command:
                     run_command(command)
-                
+
                 print("Returning to wake mode...")
                 mode = "wake"
                 stream.start()
