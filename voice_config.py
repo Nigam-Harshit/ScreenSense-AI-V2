@@ -4,21 +4,35 @@ voice_config.py  --  Centralised config for voice input (wake word + STT).
 All voice-related constants live here.  Do NOT scatter inline literals
 across voice_pipeline.py or voice.py -- change values here only.
 
-Porcupine key: read from PORCUPINE_ACCESS_KEY env var or .env file.
-The key must NOT be hardcoded in source -- set it in your .env file:
-
-    PORCUPINE_ACCESS_KEY=your_key_here
-
+Wake word engine: openWakeWord (local, no API key required).
+Model ships pre-downloaded via openwakeword.utils.download_models().
 """
 
-import os
-from pathlib import Path
+# ── Wake word (openWakeWord) ───────────────────────────────────────────────────
 
-# ── Wake word ──────────────────────────────────────────────────────────────────
+# Pre-trained ONNX model name.  "hey_jarvis_v0.1" ships with download_models().
+# Change to any other downloaded model slug (e.g. "alexa_v0.1", "hey_mycroft_v0.1").
+OWW_MODEL_NAME = "hey_jarvis_v0.1"
 
-WAKE_KEYWORD = "jarvis"
+# Detection threshold: score must exceed this to count as a wake word trigger.
+# 0.5 is the recommended default -- raise to reduce false positives,
+# lower to increase sensitivity (at the cost of more false triggers).
+OWW_THRESHOLD = 0.5
 
-# Seconds to wait for a spoken command after the wake word fires.
+# Audio chunk size fed to openWakeWord per predict() call.
+# 1280 samples @ 16 kHz = 80 ms per chunk.  Do not change unless you change
+# the sample rate -- the model was trained on 16 kHz audio.
+OWW_CHUNK_SIZE = 1280
+
+# ── Audio ──────────────────────────────────────────────────────────────────────
+
+AUDIO_SAMPLE_RATE = 16000   # Hz -- required by openWakeWord (fixed, do not change)
+AUDIO_CHANNELS    = 1       # mono
+
+# ── Voice activation timeout ───────────────────────────────────────────────────
+
+# Seconds to wait for a spoken command after the wake word fires before
+# returning to wake-word listening mode.
 VOICE_ACTIVATION_TIMEOUT_SECONDS = 12
 
 # ── Speech-to-text (STT) ───────────────────────────────────────────────────────
@@ -28,28 +42,3 @@ STT_LISTEN_TIMEOUT_SECONDS = 4
 
 # Max seconds of a single phrase to capture.
 STT_PHRASE_TIME_LIMIT_SECONDS = 8
-
-# ── Audio ──────────────────────────────────────────────────────────────────────
-
-AUDIO_CHANNELS = 1   # mono
-
-# ── Porcupine access key ───────────────────────────────────────────────────────
-
-PORCUPINE_KEY_ENV = "PORCUPINE_ACCESS_KEY"
-
-
-def load_porcupine_key() -> str | None:
-    """Read Porcupine access key from env var or .env file.
-    Returns None if not set -- caller should raise a clear error.
-    """
-    key = os.environ.get(PORCUPINE_KEY_ENV)
-    if key:
-        return key
-    env_file = Path(__file__).parent / ".env"
-    if env_file.exists():
-        with open(env_file, encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith(f"{PORCUPINE_KEY_ENV}=") and not line.startswith("#"):
-                    return line.split("=", 1)[1].strip().strip('"').strip("'")
-    return None

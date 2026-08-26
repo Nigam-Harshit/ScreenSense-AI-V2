@@ -5,7 +5,7 @@ opencv-python
 numpy
 screen-brightness-control
 ultralytics
-pvporcupine
+openwakeword==0.6.0
 sounddevice
 SpeechRecognition
 scikit-learn
