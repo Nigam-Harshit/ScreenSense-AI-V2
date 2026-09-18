@@ -99,7 +99,6 @@ def _load_oww_model(model_name: str):
 
     try:
         oww_model = Model(
-            wakeword_models=[OWW_MODEL_NAME],
             wakeword_models=[resolved_path],
             inference_framework="onnx",
         )
