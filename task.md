@@ -228,3 +228,29 @@ ey verification + `open_app(None)` defensive guard).
    - Ran `test_hardening.py`: 17/17 tests passed in 2.019s.
    - Ran `test_site_rules.py`: 40/40 tests passed in 0.011s.
    - Ran `evaluate.py --self-test`: 23/23 assertions passed.
+
+## Session Record: 2026-09-20 (Brief C — P3: Destructive Close Fallback Removal)
+
+### Objectives
+- Audit call paths reaching the `close_button` branch of `_dispatch_action()` in `main.py`.
+- Eliminate legacy `WM_CLOSE` / `time.sleep(1)` / `win32gui.IsWindow(hwnd)` / `force_close_process(target)` fallback from `_dispatch_action()`, bringing `close_button` to exact parity with `minimize_button` and `maximize_button` (YOLO-guided click or clear `button_not_found` result).
+- Audit all callers of `force_close_process()`. If none remain, delete it from `automation.py`.
+- Guarantee no voice or text command can ever trigger `taskkill /F`.
+
+### Execution Summary & Evidence
+1. **Call Path Analysis (Read-Only Audit)**:
+   - Standard NLP commands matching `close_button` are intercepted by the Route 2 gate in `_run_action()` (`if action in YOLO_CAPABLE_INTENTS:`), which attempts YOLO cropped detection and exits with `button_not_found` on miss, returning before reaching `_dispatch_action()`.
+   - The sole path able to reach `_dispatch_action("close_button", ...)` was Route 3 (VLM fallback) resolving a command to `close_button` with disruptive keywords.
+2. **Fallback Elimination (`main.py`)**:
+   - Removed `win32gui.PostMessage(hwnd, 0x0010, 0, 0)`, `time.sleep(1)`, and `force_close_process(target)` fallback from `_dispatch_action()`.
+   - A failed YOLO click in `_dispatch_action()` now simply marks `button_not_found` and prints `"Button not detected."`.
+3. **Elimination of `force_close_process` & `taskkill` (`automation.py`)**:
+   - Audited all callers of `force_close_process`: zero callers remained outside `main.py`.
+   - Deleted `def force_close_process(app)` from `automation.py` and removed its import from `main.py`.
+   - Reworded internal comments in `main.py` referencing the legacy function.
+   - Verified 0 occurrences of `taskkill` or `force_close_process` in `main.py` and `automation.py`.
+4. **Verification (`test_hardening.py`)**:
+   - Added `TestP3DestructiveCloseRemoval`: verified source files contain no `taskkill` or `force_close_process`, and verified failed click dispatches zero `WM_CLOSE` or process termination.
+   - Ran `test_hardening.py`: 19/19 tests passed in 1.338s.
+   - Ran `test_site_rules.py`: 40/40 tests passed in 0.011s.
+   - Ran `evaluate.py --self-test`: 23/23 assertions passed.

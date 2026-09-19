@@ -209,5 +209,38 @@ class TestP2CacheKeyScreenMatching(unittest.TestCase):
             self.assertEqual(resp["action"], "open_app")
 
 
+class TestP3DestructiveCloseRemoval(unittest.TestCase):
+    """P3: Verify removal of destructive WM_CLOSE / force_close_process fallback and elimination of taskkill."""
+
+    def test_source_code_contains_no_taskkill_or_force_close(self):
+        main_py = os.path.join(os.path.dirname(__file__), "main.py")
+        with open(main_py, "r", encoding="utf-8") as f:
+            content_main = f.read()
+
+        automation_py = os.path.join(os.path.dirname(__file__), "automation.py")
+        with open(automation_py, "r", encoding="utf-8") as f:
+            content_auto = f.read()
+
+        self.assertNotIn("taskkill", content_main)
+        self.assertNotIn("force_close_process", content_main)
+        self.assertNotIn("taskkill", content_auto)
+        self.assertNotIn("def force_close_process", content_auto)
+
+    def test_close_button_failure_path_has_no_destructive_fallback(self):
+        mock_log = MagicMock()
+        mock_hwnd = 12345
+        with patch("main.find_window", return_value=(mock_hwnd, "Test App")), \
+             patch("main.get_window_rect", return_value=(0, 0, 800, 600)), \
+             patch("main.detect_buttons", return_value=[]), \
+             patch("main.click_button", return_value=False), \
+             patch("win32gui.PostMessage") as mock_post_message:
+
+            main._dispatch_action("close_button", "test_app", mock_log)
+
+            mock_log.mark_result.assert_called_with("button_not_found")
+            # PostMessage must NOT have been called with WM_CLOSE (0x0010)
+            mock_post_message.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

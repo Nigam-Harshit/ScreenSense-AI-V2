@@ -193,22 +193,6 @@ def move_window(hwnd, position):
     print(f"Window moved to {position}.")
 
 
-def force_close_process(app):
-
-    try:
-        process_name = app + ".exe"
-
-        subprocess.run(
-            ["taskkill", "/IM", process_name, "/F"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-
-        print(f"Force closed {process_name}")
-
-    except:
-        print("Process close failed.")
-
 
 def snap_window(position):
 

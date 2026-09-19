@@ -36,7 +36,6 @@ from automation import (
     open_app,
     take_screenshot,
     move_window,
-    force_close_process,
     snap_window,
     increase_brightness,
     decrease_brightness,
@@ -320,23 +319,7 @@ def _dispatch_action(action, target, log_entry):
             print(f"[Route 2] Could not find the {action} on '{title}'")
             if log_entry:
                 log_entry.mark_result("button_not_found")
-
-            if action == "close_button":
-
-                print("YOLO failed → trying WM_CLOSE")
-
-                win32gui.PostMessage(hwnd, 0x0010, 0, 0)
-
-                time.sleep(1)
-
-                if win32gui.IsWindow(hwnd):
-
-                    print("WM_CLOSE failed → force closing process")
-
-                    force_close_process(target)
-
-            else:
-                print("Button not detected.")
+            print("Button not detected.")
 
     except Exception as e:
         print("Error during window interaction:", e)
@@ -358,7 +341,7 @@ def _run_action(command, action, target, confidence, route, log_entry):
     # ── Hard Policy: Window control button intents are strictly Route 2 (YOLO) ──
     # Window controls (close_button, minimize_button, maximize_button) must NEVER
     # route to Route 3 (VLM) or semantic cache, and must NEVER have silent API fallbacks
-    # (no WM_CLOSE, no force_close_process). All three button intents follow this exact policy.
+    # (no WM_CLOSE, no process termination). All three button intents follow this exact policy.
     if action in YOLO_CAPABLE_INTENTS:
         if log_entry:
             log_entry.route = "vision"
@@ -404,7 +387,7 @@ def _run_action(command, action, target, confidence, route, log_entry):
 
         # Explicit failure on detection miss for ALL three button intents
         # (close_button matches minimize_button and maximize_button exactly;
-        #  zero WM_CLOSE, zero force_close_process, zero Route 3 VLM fallback)
+        #  zero WM_CLOSE, zero force termination, zero Route 3 VLM fallback)
         print(f"[Route 2] Could not find the {action} on '{title}'")
         if log_entry:
             log_entry.route = "vision"
