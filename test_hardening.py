@@ -274,5 +274,54 @@ class TestP6ModelDependencyReproducibility(unittest.TestCase):
             self.assertEqual(kwargs["model_version"], "NOT AVAILABLE")
 
 
+import automation
+
+class TestP7SmallFixes(unittest.TestCase):
+    """P7: Small fixes verification (is_muted, screenshots, comments)."""
+
+    def test_set_volume_unmutes(self):
+        automation.is_muted = True
+        with patch("pyautogui.press"):
+            automation.set_volume(50)
+            self.assertFalse(automation.is_muted)
+
+    def test_take_screenshot_writes_to_screenshots_directory(self):
+        with patch("mss.mss") as mock_mss, \
+             patch("cv2.imwrite") as mock_imwrite, \
+             patch("os.makedirs") as mock_makedirs:
+            sct_instance = MagicMock()
+            sct_instance.monitors = [{}, {}]
+            sct_instance.grab.return_value = np.zeros((100, 100, 4), dtype=np.uint8)
+            mock_mss.return_value.__enter__.return_value = sct_instance
+
+            automation.take_screenshot()
+
+            mock_makedirs.assert_called_with("screenshots", exist_ok=True)
+            mock_imwrite.assert_called_once()
+            save_path = mock_imwrite.call_args[0][0]
+            self.assertTrue(save_path.startswith("screenshots") or "screenshots" in save_path)
+
+    def test_gitignore_contains_screenshots_rules(self):
+        gitignore_path = os.path.join(os.path.dirname(__file__), ".gitignore")
+        with open(gitignore_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("screenshots/", content)
+        self.assertIn("screenshot_*.jpg", content)
+
+    def test_main_comment_does_not_contain_pvporcupine(self):
+        main_path = os.path.join(os.path.dirname(__file__), "main.py")
+        with open(main_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertNotIn("pvporcupine", content)
+
+    def test_knn_conf_threshold_comment_updated(self):
+        knn_path = os.path.join(os.path.dirname(__file__), "knn_intent_classifier.py")
+        with open(knn_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("4/7 votes are required", content)
+        # Ensure value itself was not changed
+        self.assertIn("CONF_THRESHOLD   = 0.43", content)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

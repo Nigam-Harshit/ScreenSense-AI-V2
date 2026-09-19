@@ -26,7 +26,7 @@ from difflib import SequenceMatcher
 
 EMBED_MODEL_NAME = "all-MiniLM-L6-v2"   # 22M params, 384-dim, ~90 MB download
 K_NEIGHBORS      = 7
-CONF_THRESHOLD   = 0.43   # = 3/7 votes; below this -> VLM fallback
+CONF_THRESHOLD   = 0.43   # 3/7 = 0.4286 is below 0.43, so 4/7 votes are required; below this -> VLM fallback
 RANDOM_STATE     = 42
 
 MODELS_DIR = "models"

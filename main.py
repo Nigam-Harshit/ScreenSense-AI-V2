@@ -24,7 +24,6 @@ from window_manager import find_window, get_window_rect
 from window_manager import find_window, get_window_rect, resolve_target_window
 from vision import detect_buttons
 # voice_pipeline is imported lazily inside the voice branch below
-# so that text-mode users never load pvporcupine (Task 3 fix).
 # so that text-mode users run without loading audio/wake-word dependencies.
 from command_logger import CommandLogger
 

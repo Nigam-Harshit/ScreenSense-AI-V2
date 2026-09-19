@@ -320,3 +320,28 @@ ey verification + `open_app(None)` defensive guard).
    - Ran `test_hardening.py`: 22/22 tests passed in 2.462s.
    - Ran `test_site_rules.py`: 50/50 tests passed in 0.025s.
    - Ran `evaluate.py --self-test`: 23/23 assertions passed.
+
+## Session Record: 2026-09-20 (Brief C — P7: Small Fixes [AUTO Parts a, b, c, d])
+
+### Objectives
+- (a) Ensure `automation.py::set_volume()` sets module-level `is_muted = False` upon completion.
+- (b) Ensure `automation.py::take_screenshot()` saves to a `screenshots/` directory (created if missing). Add `screenshots/` and `screenshot_*.jpg` to `.gitignore`. Report tracked screenshot files.
+- (c) Reword stale comment in `main.py` line 27 regarding lazy loading of the wake-word engine without mentioning `pvporcupine`.
+- (d) In `knn_intent_classifier.py`, correct the comment at `CONF_THRESHOLD = 0.43` explaining that 3/7 = 0.4286 < 0.43 so 4/7 votes are required (value unchanged).
+- Note: P7e (`sleep_pc` SetSuspendState) is tagged [MANUAL] and held for the manual phase.
+
+### Execution Summary & Evidence
+1. **Volume State Tracking (`automation.py`)**:
+   - Added `global is_muted` and `is_muted = False` in `set_volume()`.
+2. **Screenshot Storage & Gitignore (`automation.py`, `.gitignore`)**:
+   - Updated `take_screenshot()` to create `screenshots/` directory and save images as `screenshots/screenshot_<timestamp>.jpg`.
+   - Added `screenshots/` and `screenshot_*.jpg` to `.gitignore`.
+   - Tracked files audit: confirmed only the root baseline `screenshot.jpg` and training dataset images are tracked; 0 files deleted from history.
+3. **Comment Corrections (`main.py`, `knn_intent_classifier.py`)**:
+   - `main.py`: removed stale `pvporcupine` mention from lazy import documentation.
+   - `knn_intent_classifier.py`: corrected arithmetic comment to `4/7 votes are required; below this -> VLM fallback` while keeping `CONF_THRESHOLD = 0.43`.
+4. **Verification (`test_hardening.py`)**:
+   - Added `TestP7SmallFixes`: verified `set_volume` unmutes state, `take_screenshot` creates and writes to `screenshots/`, `.gitignore` contains screenshot rules, `main.py` lacks `pvporcupine`, and `knn_intent_classifier.py` has updated comment with unchanged threshold.
+   - Ran `test_hardening.py`: 27/27 tests passed in 1.778s.
+   - Ran `test_site_rules.py`: 50/50 tests passed in 0.041s.
+   - Ran `evaluate.py --self-test`: 23/23 assertions passed.

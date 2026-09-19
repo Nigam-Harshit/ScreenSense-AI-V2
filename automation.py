@@ -120,9 +120,10 @@ def open_app(app):
 def take_screenshot():
 
     try:
+        os.makedirs("screenshots", exist_ok=True)
         with mss.mss() as sct:
 
-            monitor = sct.monitors[1]
+            monitor = sct.monitors[1] if len(sct.monitors) > 1 else sct.monitors[0]
 
             screenshot = sct.grab(monitor)
 
@@ -130,7 +131,7 @@ def take_screenshot():
             img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
             
             import time
-            filename = f"screenshot_{int(time.time())}.jpg"
+            filename = os.path.join("screenshots", f"screenshot_{int(time.time())}.jpg")
             cv2.imwrite(filename, img)
 
         print(f"Screenshot saved as {filename}")
@@ -277,6 +278,7 @@ def unmute_volume():
         print("Volume already unmuted")
 
 def set_volume(level):
+    global is_muted
 
     level = max(0, min(level, 100))
 
@@ -291,6 +293,7 @@ def set_volume(level):
     for _ in range(steps):
         pyautogui.press("volumeup")
 
+    is_muted = False
     print(f"Volume set to {level}")
     
 def lock_screen():

@@ -21,3 +21,8 @@ logs/
 Thumbs.db
 .vscode/
 .idea/
+
+# Screenshots
+screenshots/
+screenshot_*.jpg
+
