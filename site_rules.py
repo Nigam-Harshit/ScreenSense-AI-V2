@@ -43,6 +43,10 @@ _OPEN_VERBS = [
     "browse to",
     "click on",
     "tap on",
+    "open up",
+    "fire up",
+    "start up",
+    "pull up",
     "go to",
     "goto",
     "launch",
@@ -50,6 +54,23 @@ _OPEN_VERBS = [
     "click",
     "tap",
     "open",
+]
+
+_LEADING_FILLERS = [
+    "could you please",
+    "would you please",
+    "can you please",
+    "could you",
+    "would you",
+    "can you",
+    "please",
+    "hey",
+]
+
+_TRAILING_FILLERS = [
+    "for me",
+    "please",
+    "now",
 ]
 
 _TRAILING_SITE_NOUNS = [
@@ -84,6 +105,29 @@ def _normalize(command: str) -> str:
     return s
 
 
+def _strip_fillers(norm: str) -> str:
+    """Strip optional leading and trailing conversational fillers."""
+    s = norm.strip()
+    changed = True
+    while changed:
+        changed = False
+        for filler in _LEADING_FILLERS:
+            if s == filler:
+                return ""
+            if s.startswith(filler + " "):
+                s = s[len(filler):].strip()
+                changed = True
+                break
+        for filler in _TRAILING_FILLERS:
+            if s == filler:
+                return ""
+            if s.endswith(" " + filler):
+                s = s[:-len(" " + filler)].strip()
+                changed = True
+                break
+    return s
+
+
 def match_rule(command: str):
     """
     Pure function that evaluates a natural-language command against deterministic rules.
@@ -95,6 +139,10 @@ def match_rule(command: str):
       ("unsupported", reason)            for unsupported on-screen content interactions
     """
     norm = _normalize(command)
+    if not norm:
+        return None
+
+    norm = _strip_fillers(norm)
     if not norm:
         return None
 

@@ -254,3 +254,29 @@ ey verification + `open_app(None)` defensive guard).
    - Ran `test_hardening.py`: 19/19 tests passed in 1.338s.
    - Ran `test_site_rules.py`: 40/40 tests passed in 0.011s.
    - Ran `evaluate.py --self-test`: 23/23 assertions passed.
+
+## Session Record: 2026-09-20 (Brief C — P5: Rule-Layer Natural Phrasing)
+
+### Objectives
+- Extend deterministic site and scroll rules in `site_rules.py` with natural conversational variations:
+  - Optional leading conversational fillers: `please`, `can you`, `could you`, `would you`, `hey`.
+  - Extra action verbs: `open up`, `fire up`, `start up`, `pull up`.
+  - Optional trailing conversational fillers: `please`, `for me`, `now`.
+- Preserve exact alias match requirements and exception words intact (`intents_v3.json` and `click_element` untouched).
+- Note for future development: the unsupported-click guard in `site_rules.py` must be revisited when `click_element` ships with a real executor.
+
+### Execution Summary & Evidence
+1. **Rule Layer Phrasing (`site_rules.py`)**:
+   - Added `_strip_fillers()` stripping leading conversational fillers (`could you please`, `would you please`, `can you please`, `could you`, `would you`, `can you`, `please`, `hey`) and trailing fillers (`for me`, `please`, `now`).
+   - Added extra verbs to `_OPEN_VERBS`: `open up`, `fire up`, `start up`, `pull up` (ordered to match compound verbs before single-word `open`).
+   - Maintained exact alias mapping and ordinal / exception word boundaries.
+2. **Future Dependency Note**:
+   - The unsupported-click guard in `site_rules.py` intercepts generic on-screen content clicks (returning `unsupported`). This guard must be revisited and properly routed when `click_element` ships with a real vision-grounded coordinate executor.
+3. **Verification (`test_site_rules.py`)**:
+   - Added `TestP5RulePhrasing`:
+     - Positive tests: `"please open youtube"`, `"can you open apple's website"`, `"open up youtube"`, `"fire up github"`, `"open youtube please"`, `"could you scroll down a bit"`.
+     - Negative tests (returns `None`): `"open up notepad"`, `"please open google chrome"`, `"please close youtube"`.
+     - Unsupported guard with polite prefix: `"please click on the first result"`.
+   - Ran `test_site_rules.py`: 50/50 tests passed in 0.014s (all 40 prior tests + 10 new phrasing tests).
+   - Ran `test_hardening.py`: 19/19 tests passed in 1.518s.
+   - Ran `evaluate.py --self-test`: 23/23 assertions passed.

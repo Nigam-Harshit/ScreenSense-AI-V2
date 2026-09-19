@@ -181,6 +181,44 @@ class TestRuleExecution(unittest.TestCase):
         mock_log.mark_result.assert_called_once_with("unsupported", error_msg=UNSUPPORTED_MESSAGE)
 
 
+class TestP5RulePhrasing(unittest.TestCase):
+    """P5: Natural speech phrasing rules for site and scroll commands."""
+
+    def test_positive_phrasing_open_youtube_with_please_prefix(self):
+        self.assertEqual(match_rule("please open youtube"), ("open_website", "https://www.youtube.com"))
+
+    def test_positive_phrasing_open_apples_website_with_can_you(self):
+        self.assertEqual(match_rule("can you open apple's website"), ("open_website", "https://www.apple.com"))
+
+    def test_positive_phrasing_open_up_youtube(self):
+        self.assertEqual(match_rule("open up youtube"), ("open_website", "https://www.youtube.com"))
+
+    def test_positive_phrasing_fire_up_github(self):
+        self.assertEqual(match_rule("fire up github"), ("open_website", "https://github.com"))
+
+    def test_positive_phrasing_open_youtube_trailing_please(self):
+        self.assertEqual(match_rule("open youtube please"), ("open_website", "https://www.youtube.com"))
+
+    def test_positive_phrasing_scroll_down_a_bit_with_could_you(self):
+        self.assertEqual(match_rule("could you scroll down a bit"), ("scroll", "down", 300))
+
+    def test_negative_phrasing_open_up_notepad(self):
+        self.assertIsNone(match_rule("open up notepad"))
+
+    def test_negative_phrasing_please_open_google_chrome(self):
+        self.assertIsNone(match_rule("please open google chrome"))
+
+    def test_negative_phrasing_please_close_youtube(self):
+        self.assertIsNone(match_rule("please close youtube"))
+
+    def test_unsupported_guard_with_polite_prefix(self):
+        self.assertEqual(
+            match_rule("please click on the first result"),
+            ("unsupported", UNSUPPORTED_MESSAGE)
+        )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
 
