@@ -53,6 +53,7 @@ VALID_ACTIONS = [
     "media_play_pause", "media_next", "media_prev",
     "new_desktop", "next_desktop", "prev_desktop", "close_desktop",
     "type_text",
+    "click_element",
     "unknown",   # returned when command is genuinely unactionable
 ]
 
@@ -70,6 +71,7 @@ Respond with ONLY valid JSON — no markdown fences, no commentary:
 {{
   "action": "<one of the valid actions>",
   "target": "<app name | number | text | null>",
+  "target": "<app name | number | text | [x, y] coordinates | null>",
   "reasoning": "<one sentence>",
   "confidence": <0.0 to 1.0>
 }}
@@ -80,6 +82,9 @@ Rules:
 - Use "unknown" if the command is unactionable or genuinely unclear even with the screenshot.
 - "target" is null for actions that need no argument (lock_screen, scroll_down, etc.).
 - "target" is the app name for: open_app, close_button, minimize_button, maximize_button, focus_window.
+- "target" is [x, y] screen coordinates (integers) for: click_element.
+- If the user says "click on X", "tap X", "press X", or references a visible UI button, contact, chat, name, or link on screen, return action "click_element" with its [x, y] coordinates.
+- NEVER default a click request, contact name, or proper noun to "type_text". "type_text" is ONLY for dictating text into an active input field.
 - "target" is the text content for: type_text.
 - "target" is the numeric level (integer) for: set_volume, set_brightness.
 - "target" is [app1, app2] for: split_apps.
@@ -133,6 +138,7 @@ def _call_gemini(command:     str,
         return action_hint, None, msg, 0.0, 0.0
 
     genai.configure(api_key=api_key)
+    genai.configure(api_key=api_key, transport="rest")
     model = genai.GenerativeModel(VLM_MODEL_NAME)
 
     prompt = _PROMPT.format(
@@ -148,6 +154,11 @@ def _call_gemini(command:     str,
         try:
             import cv2
             rgb = cv2.cvtColor(screenshot_bgr, cv2.COLOR_BGR2RGB)
+            h, w = rgb.shape[:2]
+            max_dim = 1024
+            if max(h, w) > max_dim:
+                scale = max_dim / max(h, w)
+                rgb = cv2.resize(rgb, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
             pil_img = PIL.Image.fromarray(rgb)
             parts.append(pil_img)
         except Exception as e:
@@ -170,10 +181,14 @@ def _call_gemini(command:     str,
         return action_hint, None, msg, 0.0, latency_ms
 
     latency_ms = (time.perf_counter() - t0) * 1000
+    return _parse_vlm_response(raw_text, action_hint, latency_ms)
 
+
+def _parse_vlm_response(raw_text: str, action_hint: str, latency_ms: float = 0.0):
     # Parse JSON — handle markdown fences if Gemini wraps the output
     try:
         clean = raw_text
+        clean = raw_text.strip()
         if clean.startswith("```"):
             parts_md = clean.split("```")
             clean = parts_md[1]
@@ -188,6 +203,15 @@ def _call_gemini(command:     str,
         if action not in VALID_ACTIONS:
             print(f"[VLM] Unrecognised action '{action}' — falling back to NLP hint")
             action = action_hint
+
+        if action == "click_element":
+            if isinstance(target, (list, tuple)) and len(target) >= 2:
+                target = [int(target[0]), int(target[1])]
+            elif isinstance(target, str):
+                import re
+                nums = re.findall(r"\d+", target)
+                if len(nums) >= 2:
+                    target = [int(nums[0]), int(nums[1])]
 
         return action, target, reasoning, vlm_conf, latency_ms
 
@@ -247,6 +271,7 @@ def route3_handle(command:     str,
     if ROUTE3_CACHE_ENABLED:
         cache      = get_cache()
         cache_hit, cached_resp = cache.query(command, screen_hash)
+        cache_hit, cached_resp = cache.query(command, screen_hash, action_hint=action_hint)
 
     # ── 3a. Cache hit: reuse cached response ──────────────────────────────────
     if cache_hit and cached_resp is not None:
@@ -298,7 +323,7 @@ def route3_handle(command:     str,
                 "target":         target,
                 "reasoning":      reasoning,
                 "vlm_confidence": vlm_conf,
-            })
+            }, action=action, target=target)
 
     # ── 4. Log invocation ─────────────────────────────────────────────────────
     logger.log_invocation(

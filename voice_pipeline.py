@@ -20,6 +20,7 @@ import sys
 from pathlib import Path
 
 from voice import listen
+from command_logger import CommandLogger
 from voice_config import (
     OWW_MODEL_NAME,
     OWW_THRESHOLD,
@@ -28,6 +29,8 @@ from voice_config import (
     AUDIO_CHANNELS,
     VOICE_ACTIVATION_TIMEOUT_SECONDS,
 )
+
+_cmd_logger = CommandLogger()
 
 
 def _load_oww_model(model_name: str):
@@ -138,13 +141,27 @@ def voice_loop(run_command):
         callback=audio_callback,
     )
 
+    chunk_counter = 0
     with stream:
         while True:
             # ── Wake-word listening phase ──────────────────────────────────────
             chunk = audio_q.get()
+            chunk_counter += 1
             prediction = oww_model.predict(chunk)
             score = prediction.get(OWW_MODEL_NAME, 0.0)
             score = prediction.get(model_key, prediction.get(OWW_MODEL_NAME, 0.0))
+
+            rms = float(np.sqrt(np.mean(chunk.astype(np.float32) ** 2)))
+            status = "triggered" if score >= OWW_THRESHOLD else ("rejected" if (score >= 0.02 or rms >= 250) else "silence")
+
+            # Telemetry: Log triggers, non-silent rejections, and periodic silence baselines
+            if status in ("triggered", "rejected") or (chunk_counter % 25 == 0):
+                _cmd_logger.log_wakeword(
+                    score=score,
+                    threshold=OWW_THRESHOLD,
+                    rms=rms,
+                    status=status
+                )
 
             if score < OWW_THRESHOLD:
                 continue
@@ -164,6 +181,15 @@ def voice_loop(run_command):
                     run_command(command)
                 else:
                     print("[Voice] No command heard — returning to wake mode.")
+                    _cmd_logger.log_simple(
+                        raw_command="",
+                        action=None,
+                        target=None,
+                        confidence=0.0,
+                        route="asr_failure",
+                        result="asr_failure",
+                        error_msg="No speech detected or speech unintelligible"
+                    )
             finally:
                 # Always restart listening, even if run_command raises
                 oww_model.reset()   # clear internal state between activations

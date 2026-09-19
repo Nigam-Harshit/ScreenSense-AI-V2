@@ -2,7 +2,7 @@
 route3_cache.py  --  Semantic embedding cache for Route 3 VLM fallback.
 
 Cache key  : normalized all-MiniLM-L6-v2 embedding of
-             "{command} [screen:{screen_hash}]"
+             "intent:{action} | target:{target} | cmd:{command} [screen:{screen_hash}]"
 Cache value: dict with action, target, reasoning, vlm_confidence
 
 Design decisions (all flagged as "chosen, pending tuning"):
@@ -58,7 +58,7 @@ class SemanticCache:
     In-memory LRU semantic cache for Route 3 VLM responses.
 
     The cache is keyed by the embedding of a composite string:
-        "{command} [screen:{screen_hash}]"
+        "intent:{action} | target:{target} | cmd:{command} [screen:{screen_hash}]"
     so that the same command issued against a different screen state
     will NOT match (assuming the screen hash changes meaningfully).
 
@@ -75,19 +75,28 @@ class SemanticCache:
         self._store: OrderedDict[str, tuple[np.ndarray, dict]] = OrderedDict()
         self._counter       = 0
 
-    def _cache_key_text(self, command: str, screen_hash: str) -> str:
-        return f"{command.lower().strip()} [screen:{screen_hash}]"
+    def _cache_key_text(self, command: str, screen_hash: str, action: str = None, target: str = None) -> str:
+        act = action if action is not None else "none"
+        tgt = str(target) if target is not None else "none"
+        return f"intent:{act} | target:{tgt} | cmd:{command.lower().strip()} [screen:{screen_hash}]"
 
-    def query(self, command: str, screen_hash: str) -> tuple[bool, dict | None]:
+    def query(self, command: str, screen_hash: str,
+              action_hint: str = None, target_hint: str = None) -> tuple[bool, dict | None]:
         """
         Look up a cache entry.
+        Bypasses window control button intents.
+        Requires cached action to match action_hint when action_hint is provided.
 
         Returns:
           (True,  cached_response_dict)  on hit  — response includes
                                                     '_cache_similarity' key
           (False, None)                  on miss
         """
-        key_text = self._cache_key_text(command, screen_hash)
+        # Hard policy: window control button intents never query the semantic cache
+        if action_hint in ("close_button", "minimize_button", "maximize_button"):
+            return False, None
+
+        key_text = self._cache_key_text(command, screen_hash, action_hint, target_hint)
         q_emb    = _embed(key_text)
 
         best_sim   = -1.0
@@ -95,6 +104,18 @@ class SemanticCache:
         best_id    = None
 
         for entry_id, (emb, resp) in self._store.items():
+            cached_act = resp.get("action")
+            cached_tgt = resp.get("target")
+
+            # Hard constraint: reject hit if cached action mismatches current action_hint
+            if action_hint is not None and cached_act != action_hint:
+                continue
+
+            # Target constraint: reject hit if targets are explicitly conflicting
+            if target_hint is not None and cached_tgt is not None:
+                if str(cached_tgt).lower() != str(target_hint).lower():
+                    continue
+
             sim = _cosine(q_emb, emb)
             if sim > best_sim:
                 best_sim  = sim
@@ -108,12 +129,21 @@ class SemanticCache:
 
         return False, None
 
-    def store(self, command: str, screen_hash: str, response: dict) -> None:
+    def store(self, command: str, screen_hash: str, response: dict,
+              action: str = None, target: str = None) -> None:
         """
-        Add a (command, screen_hash) → response entry.
+        Add a (command, screen_hash, action, target) → response entry.
         Evicts the oldest entry if over the LRU limit.
+        Bypasses window control button intents.
         """
-        key_text = self._cache_key_text(command, screen_hash)
+        act = action or response.get("action")
+        tgt = target if target is not None else response.get("target")
+
+        # Hard policy: window control button intents never store in semantic cache
+        if act in ("close_button", "minimize_button", "maximize_button"):
+            return
+
+        key_text = self._cache_key_text(command, screen_hash, act, tgt)
         emb      = _embed(key_text)
 
         self._counter += 1

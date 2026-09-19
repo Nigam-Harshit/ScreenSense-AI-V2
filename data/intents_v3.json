@@ -1498,6 +1498,51 @@
         "please type in field test for me",
         "can you type in field test now"
       ]
+    },
+    {
+      "intent": "click_element",
+      "examples": [
+        "click on harshit nigam",
+        "click harshit nigam",
+        "tap on the submit button",
+        "click on the send icon",
+        "select harshit nigam",
+        "click on search bar",
+        "press the play button",
+        "click on download",
+        "click the first link",
+        "tap the notification",
+        "click cancel",
+        "click ok",
+        "click save changes",
+        "tap on profile",
+        "click next page",
+        "click on file",
+        "click edit menu",
+        "press submit",
+        "tap on contact",
+        "click on the message",
+        "click on settings",
+        "click on add friend",
+        "tap the checkbox",
+        "click on the close icon",
+        "click on the blue button",
+        "click on the logo",
+        "press on the mic icon",
+        "click on search button",
+        "click on continue",
+        "tap on the dropdown",
+        "click on the link",
+        "click on send message",
+        "tap on the like button",
+        "click on share",
+        "click on subscribe",
+        "click the tab",
+        "tap on account",
+        "click confirm",
+        "click the user name",
+        "select the item"
+      ]
     }
   ]
 }

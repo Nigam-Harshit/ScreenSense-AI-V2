@@ -31,10 +31,12 @@ Return value of verify_action()
                               or None if the loop timed out without stabilising
 
 Verification outcomes (unchanged from Phase 5):
+Verification outcomes:
   "verified"                     Meaningful, stable change detected
   "unverified_no_change"         Little/no change — action may have failed
   "unverified_unexpected_change" Very large change — something unexpected
   "unverified_capture_error"     Screenshot capture failed (non-fatal)
+  "display_unavailable"          Unrendered/all-black frame from unattended/DPMS display session
 
 Diff method: per-pixel absolute intensity delta > _PIXEL_CHANGE_THRESHOLD
 counts as "changed". No additional dependencies beyond mss and cv2.
@@ -71,6 +73,23 @@ _PIXEL_CHANGE_THRESHOLD = 10
 _STABLE_DIFF_TOLERANCE = 0.01
 
 
+# ── Capture validity check (headless / DPMS detection) ─────────────────────────
+
+def is_valid_capture(img: np.ndarray | None) -> bool:
+    """
+    Check if a captured frame represents an active, rendered display surface.
+    Returns False if frame is None, empty, all zeros (e.g. headless / DPMS sleep),
+    or has zero/near-zero pixel variance (unrendered desktop buffer).
+    """
+    if img is None or img.size == 0:
+        return False
+    max_val = int(img.max())
+    min_val = int(img.min())
+    if max_val == 0 or (max_val - min_val) < 2:
+        return False
+    return True
+
+
 # ── Screen capture ─────────────────────────────────────────────────────────────
 
 def capture_fullscreen() -> tuple[np.ndarray | None, str]:
@@ -86,9 +105,12 @@ def capture_fullscreen() -> tuple[np.ndarray | None, str]:
     try:
         with mss.mss() as sct:
             monitor = sct.monitors[1]           # index 0 = all monitors combined
+            monitor = sct.monitors[1] if len(sct.monitors) > 1 else sct.monitors[0]
             shot    = sct.grab(monitor)
             img     = np.array(shot)
             img     = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+        if not is_valid_capture(img):
+            return img, "display_unavailable"
         return img, _perceptual_hash(img)
     except Exception as e:
         print(f"[Route3Verify] Capture error (non-fatal): {e}")
@@ -109,6 +131,7 @@ def _perceptual_hash(img: np.ndarray, grid: int = 16) -> str:
 
 
 # ── Diff computation (unchanged from Phase 5) ──────────────────────────────────
+# ── Diff computation ──────────────────────────────────────────────────────────
 
 def compute_diff(before: np.ndarray | None,
                  after:  np.ndarray | None) -> tuple[str, float]:
@@ -124,6 +147,9 @@ def compute_diff(before: np.ndarray | None,
     """
     if before is None or after is None:
         return "unverified_capture_error", 0.0
+
+    if not is_valid_capture(before) or not is_valid_capture(after):
+        return "display_unavailable", 0.0
 
     # Ensure same dimensions (e.g. if resolution changed — unlikely but safe)
     if before.shape != after.shape:
@@ -176,6 +202,9 @@ def verify_action(pre_screenshot: np.ndarray | None,
     if pre_screenshot is None:
         return "unverified_capture_error", 0.0, 0, None
 
+    if not is_valid_capture(pre_screenshot):
+        return "display_unavailable", 0.0, 0, None
+
     try:
         t_start     = time.perf_counter()
         deadline    = t_start + VERIFY_DELAY_SECONDS
@@ -189,13 +218,17 @@ def verify_action(pre_screenshot: np.ndarray | None,
             polls_taken += 1
 
             curr_ss, _ = capture_fullscreen()
-            if curr_ss is None:
-                # Capture failed this poll — treat as no-change, keep polling
+            if curr_ss is None or not is_valid_capture(curr_ss):
+                # Capture failed or unrendered display this poll — keep polling
                 prev_change_pct = None
                 prev_screenshot = None
                 continue
 
-            _, change_pct = compute_diff(pre_screenshot, curr_ss)
+            outcome_diff, change_pct = compute_diff(pre_screenshot, curr_ss)
+            if outcome_diff == "display_unavailable":
+                prev_change_pct = None
+                prev_screenshot = None
+                continue
 
             # ── Debounce check ────────────────────────────────────────────────
             # Require that two consecutive polls both show a meaningful change
@@ -214,10 +247,14 @@ def verify_action(pre_screenshot: np.ndarray | None,
             prev_screenshot = curr_ss
 
         # ── Timeout path (unchanged from Phase 5 logic) ───────────────────────
+        # ── Timeout path ───────────────────────────────────────────────────────
         # Use the last captured screenshot for the final diff classification.
         # If we never got a successful capture, return a capture error.
         if prev_screenshot is None:
             return "unverified_capture_error", 0.0, polls_taken, None
+        # If we never got a valid capture during polling, return display_unavailable.
+        if prev_screenshot is None or not is_valid_capture(prev_screenshot):
+            return "display_unavailable", 0.0, polls_taken, None
 
         outcome, final_pct = compute_diff(pre_screenshot, prev_screenshot)
         return outcome, final_pct, polls_taken, None

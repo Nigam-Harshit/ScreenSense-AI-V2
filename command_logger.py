@@ -1,5 +1,5 @@
 """
-command_logger.py  --  Structured execution logger for ScreenSense V2
+command_logger.py  --  Structured execution logger for ScreenSense
 
 Records every command execution to a JSONL log file:
   logs/commands_YYYY-MM-DD.jsonl
@@ -10,8 +10,11 @@ Each entry contains:
   action         : intent label returned by nlp.parse_command()
   target         : slot value (app name, number, etc.)
   confidence     : k-NN confidence score [0.0 – 1.0]
-  route          : "knn" | "vlm_fallback" | "regex_fallback" | "exit"
-  result         : "ok" | "not_found" | "error" | "low_confidence"
+  route          : "knn" | "vlm_fallback" | "regex_fallback" | "exit" | "vision" | "fast_path" | "asr_failure"
+  result         : "ok" | "not_found" | "error" | "low_confidence" | "button_not_found" | "asr_failure"
+  target_hwnd    : (optional) resolved window handle
+  target_title   : (optional) resolved window title
+  action_taken   : (optional) specific automation action executed
   error_msg      : (optional) exception message if result == "error"
   duration_ms    : wall-clock time for the whole run_command() call
 
@@ -45,7 +48,8 @@ LOG_DIR = Path("logs")
 
 class _LogEntry:
     """Mutable entry built during a command execution."""
-    def __init__(self, raw_command, action, target, confidence, route):
+    def __init__(self, raw_command, action, target, confidence, route,
+                 target_hwnd=None, target_title=None, action_taken=None):
         self.ts           = datetime.now(timezone.utc).isoformat()
         self.raw_command  = raw_command
         self.action       = action
@@ -54,7 +58,19 @@ class _LogEntry:
         self.route        = route
         self.result       = "ok"
         self.error_msg    = None
+        self.target_hwnd  = target_hwnd
+        self.target_title = target_title
+        self.action_taken = action_taken
         self._start       = time.perf_counter()
+
+    def set_window(self, hwnd: int | None, title: str | None = None):
+        """Record the resolved window handle and title."""
+        self.target_hwnd  = hwnd
+        self.target_title = title
+
+    def set_action_taken(self, action_taken: str | None):
+        """Record the actual automation dispatch action executed."""
+        self.action_taken = action_taken
 
     def mark_result(self, result: str, error_msg: str = None):
         """Call inside the `with` block to override the default 'ok' result."""
@@ -64,14 +80,17 @@ class _LogEntry:
     def to_dict(self):
         duration_ms = round((time.perf_counter() - self._start) * 1000, 1)
         d = {
-            "timestamp":   self.ts,
-            "raw_command": self.raw_command,
-            "action":      self.action,
-            "target":      self.target,
-            "confidence":  self.confidence,
-            "route":       self.route,
-            "result":      self.result,
-            "duration_ms": duration_ms,
+            "timestamp":    self.ts,
+            "raw_command":  self.raw_command,
+            "action":       self.action,
+            "target":       self.target,
+            "confidence":   self.confidence,
+            "route":        self.route,
+            "result":       self.result,
+            "duration_ms":  duration_ms,
+            "target_hwnd":  self.target_hwnd,
+            "target_title": self.target_title,
+            "action_taken": self.action_taken,
         }
         if self.error_msg:
             d["error_msg"] = self.error_msg
@@ -134,15 +153,43 @@ class CommandLogger:
                    route:       str,
                    result:      str = "ok",
                    error_msg:   str = None,
-                   duration_ms: float = 0.0):
+                   duration_ms: float = 0.0,
+                   target_hwnd: int | None = None,
+                   target_title: str | None = None,
+                   action_taken: str | None = None):
         """One-shot log for callers that don't use the context manager."""
-        entry = _LogEntry(raw_command, action, target, confidence, route)
+        entry = _LogEntry(raw_command, action, target, confidence, route,
+                          target_hwnd=target_hwnd, target_title=target_title, action_taken=action_taken)
         entry.mark_result(result, error_msg)
         d = entry.to_dict()
         d["duration_ms"] = duration_ms
         self._write(d)
 
-    # ── Convenience readers (for the evaluation harness in Week 2) ────────────
+    # ── Convenience readers ──────────────────────────────────────────────────
+    def log_wakeword(self,
+                     score: float,
+                     threshold: float,
+                     rms: float,
+                     status: str,
+                     audio_energy: float = None):
+        """Log wake-word detection scores (triggered, rejected, or silence)."""
+        today = datetime.now().strftime("%Y-%m-%d")
+        ww_path = self._log_dir / f"wakeword_{today}.jsonl"
+        entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "score": round(float(score), 4),
+            "threshold": round(float(threshold), 4),
+            "rms": round(float(rms), 2),
+            "status": status,
+        }
+        if audio_energy is not None:
+            entry["energy"] = round(float(audio_energy), 2)
+        try:
+            with self._lock:
+                with open(ww_path, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        except Exception as e:
+            print(f"[Logger] Wakeword write error (non-fatal): {e}")
 
     def read_today(self) -> list[dict]:
         """Return all log entries from today as a list of dicts."""
@@ -151,6 +198,10 @@ class CommandLogger:
     def read_file(self, date_str: str) -> list[dict]:
         """Read a specific day's log. date_str format: 'YYYY-MM-DD'."""
         return self._read_file(self._log_dir / f"commands_{date_str}.jsonl")
+
+    def read_wakeword_file(self, date_str: str) -> list[dict]:
+        """Read a specific day's wakeword log. date_str format: 'YYYY-MM-DD'."""
+        return self._read_file(self._log_dir / f"wakeword_{date_str}.jsonl")
 
     def _read_file(self, path: Path) -> list[dict]:
         if not path.exists():

@@ -95,6 +95,20 @@ _DESK_KEYWORDS = {
 def _keyword_override(action: str, words: list) -> str:
     """Snap prediction to correct label when a directional keyword is present."""
     word_set = set(words)
+
+    # Deterministic directional disambiguation for move/snap/shift
+    if any(verb in word_set for verb in ("move", "snap", "shift")):
+        if "left" in word_set:
+            return "move_left"
+        if "right" in word_set:
+            return "move_right"
+        if "top" in word_set or "up" in word_set:
+            return "move_top"
+        if "bottom" in word_set or "down" in word_set:
+            return "move_bottom"
+        if "fullscreen" in word_set or "full" in word_set or "maximized" in word_set:
+            return "move_fullscreen"
+
     if action in _SNAP_GROUP:
         for kw, intent in _SNAP_KEYWORDS.items():
             if kw in word_set:
@@ -159,6 +173,19 @@ def _extract_split_targets(command, words):
     return None
 
 
+_MOVE_NOISE_TOKENS = frozenset({
+    "move", "snap", "shift", "put", "place", "send", "dock",
+    "to", "the", "on", "at", "towards",
+    "left", "right", "top", "bottom", "up", "down", "fullscreen", "max", "full",
+    "window", "screen", "side", "half", "corner",
+    "it", "this", "that", "here", "current", "active", "please"
+})
+
+def _extract_move_target(command, words):
+    cleaned = [w for w in words if w.lower() not in _MOVE_NOISE_TOKENS]
+    return " ".join(cleaned) if cleaned else None
+
+
 _SLOT_EXTRACTORS = {
     "set_brightness":  lambda cmd, words: _extract_number(cmd) or 50,
     "set_volume":      lambda cmd, words: _extract_number(cmd) or 50,
@@ -174,6 +201,11 @@ _SLOT_EXTRACTORS = {
     "move_top":        lambda cmd, words: _extract_app(words),
     "move_bottom":     lambda cmd, words: _extract_app(words),
     "move_fullscreen": lambda cmd, words: _extract_app(words),
+    "move_left":       lambda cmd, words: _extract_move_target(cmd, words),
+    "move_right":      lambda cmd, words: _extract_move_target(cmd, words),
+    "move_top":        lambda cmd, words: _extract_move_target(cmd, words),
+    "move_bottom":     lambda cmd, words: _extract_move_target(cmd, words),
+    "move_fullscreen": lambda cmd, words: _extract_move_target(cmd, words),
 }
 
 
@@ -206,11 +238,11 @@ def parse_command(command: str) -> tuple:
         try:
             action, confidence = _knn_predict(command)
             action = _keyword_override(action, words)   # directional override
+            target = _extract_slot(action, command, words)
             if confidence < CONF_THRESHOLD:
                 print(f"[NLP] Low confidence ({confidence:.2f}) for '{command}' "
                       f"-> '{action}' -- routing to VLM")
-                return action, None, confidence
-            target = _extract_slot(action, command, words)
+                return action, target, confidence
             return action, target, confidence
         except Exception as e:
             print(f"[NLP] k-NN prediction error: {e}")
@@ -219,11 +251,11 @@ def parse_command(command: str) -> tuple:
     if _load_lr():
         try:
             action, confidence = _lr_predict(command)
+            target = _extract_slot(action, command, words)
             lr_threshold = 0.30   # LR uses different calibration
             if confidence < lr_threshold:
                 print(f"[NLP] LR low confidence ({confidence:.2f}) -> VLM")
-                return action, None, confidence
-            target = _extract_slot(action, command, words)
+                return action, target, confidence
             return action, target, confidence
         except Exception as e:
             print(f"[NLP] LR prediction error: {e}")

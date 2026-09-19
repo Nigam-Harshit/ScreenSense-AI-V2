@@ -1,6 +1,7 @@
 import pyautogui
 import time
 import subprocess
+import webbrowser
 import mss
 import cv2
 import numpy as np
@@ -40,19 +41,53 @@ def focus_window(hwnd):
 
     try:
         # Pressing ALT momentarily allows us to bypass the Windows Foreground Lock Timeout
+        if not hwnd or not win32gui.IsWindow(hwnd):
+            return False
+
+        if win32gui.IsIconic(hwnd):
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+        else:
+            win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+
+        # Pressing ALT momentarily allows bypassing Windows Foreground Lock Timeout
         pyautogui.press("alt")
         win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
         win32gui.SetForegroundWindow(hwnd)
+        try:
+            win32gui.SetForegroundWindow(hwnd)
+        except Exception:
+            win32gui.BringWindowToTop(hwnd)
 
         time.sleep(0.4)
 
         print("Window focused.")
+        return True
 
     except Exception as e:
         print("Could not focus window:", e)
+        return False
 
 
 def open_app(app):
+
+    if not app:
+        print("[Automation] Cannot open app: target missing.")
+        return False
+
+    # Check if a window for this application is already open
+    try:
+        import window_manager
+        if hasattr(window_manager, "resolve_target_window"):
+            hwnd, title, _ = window_manager.resolve_target_window(app)
+        else:
+            hwnd, title = window_manager.find_window(app)
+
+        if hwnd and win32gui.IsWindow(hwnd):
+            print(f"[Automation] Found existing window for '{app}' ('{title}') — bringing to foreground.")
+            focus_window(hwnd)
+            return "focused_existing"
+    except Exception as e:
+        print(f"[Automation] Error checking for existing window: {e}")
 
     # common system apps
     system_apps = {
@@ -66,8 +101,12 @@ def open_app(app):
 
     if app in system_apps:
         subprocess.Popen(system_apps[app])
+    app_key = str(app).lower().strip()
+    if app_key in system_apps:
+        subprocess.Popen(system_apps[app_key])
         print("Opening", app)
         return
+        return "opened_new"
 
     print(f"Searching and opening '{app}'...")
     pyautogui.press('win')
@@ -75,6 +114,7 @@ def open_app(app):
     pyautogui.write(app, interval=0.05)
     time.sleep(1)
     pyautogui.press('enter')
+    return "opened_new"
 
 
 def take_screenshot():
@@ -282,10 +322,20 @@ def sleep_pc():
 
 def scroll_down():
     pyautogui.scroll(-800)
+def open_website(url):
+    webbrowser.open(url)
+    print(f"Opening website: {url}")
+
+
+def scroll_down(amount=800):
+    pyautogui.scroll(-amount)
     print("Scrolled down")
 
 def scroll_up():
     pyautogui.scroll(800)
+
+def scroll_up(amount=800):
+    pyautogui.scroll(amount)
     print("Scrolled up")
 
 def media_play_pause():
@@ -319,3 +369,12 @@ def close_desktop():
 def type_text(text):
     pyautogui.write(text, interval=0.02)
     print(f"Typed text: {text}")
+
+def click_coordinate(x, y):
+    try:
+        pyautogui.moveTo(int(x), int(y), duration=0.2)
+        pyautogui.click()
+        return True
+    except Exception as e:
+        print(f"[Automation] Click coordinate error: {e}")
+        return False
