@@ -280,3 +280,43 @@ ey verification + `open_app(None)` defensive guard).
    - Ran `test_site_rules.py`: 50/50 tests passed in 0.014s (all 40 prior tests + 10 new phrasing tests).
    - Ran `test_hardening.py`: 19/19 tests passed in 1.518s.
    - Ran `evaluate.py --self-test`: 23/23 assertions passed.
+
+## Session Record: 2026-09-20 (Brief C — P6: Model & Dependency Reproducibility)
+
+### Objectives
+- Configure `VLM_MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")` in `route3_config.py` with `.env.example` documentation.
+- Log model name and resolved model version (or `"NOT AVAILABLE"`) on every Route 3 invocation and verification entry.
+- Pin all unpinned direct requirements in `requirements.txt` to currently installed versions after confirming `pip check` reports no conflicts.
+- Record that the project currently uses the older `google-generativeai` package and that SDK migration is deferred to Harshit.
+
+### Execution Summary & Evidence
+1. **Model Configuration (`route3_config.py`, `.env.example`)**:
+   - Updated `VLM_MODEL_NAME` to read `os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")`.
+   - Documented optional `GEMINI_MODEL=gemini-flash-lite-latest` override in `.env.example`.
+2. **Telemetry Instrumentation (`route3_logger.py`, `vlm.py`)**:
+   - Extended `Route3Logger.log_invocation` to record `model_name` (defaulting to `VLM_MODEL_NAME`) and `model_version` (defaulting to `"NOT AVAILABLE"`).
+   - Extended `Route3Logger.log_verification` to record `model_name`.
+   - Updated `_call_gemini` in `vlm.py` to inspect `response.model_version` / `response._response.model_version` and pass it to logger.
+3. **Dependency Pinning (`requirements.txt`)**:
+   - Ran `pip check`: confirmed 0 broken requirements.
+   - Pinned 13 previously unpinned packages:
+     - `pywin32==311`
+     - `pyautogui==0.9.54`
+     - `mss==10.1.0`
+     - `opencv-python==4.13.0.92`
+     - `numpy==2.4.2`
+     - `screen-brightness-control==0.27.0`
+     - `ultralytics==8.4.14`
+     - `sounddevice==0.5.5`
+     - `SpeechRecognition==3.14.5`
+     - `scikit-learn==1.8.0`
+     - `wandb==0.30.0`
+     - `google-generativeai==0.8.6`
+     - `Pillow==12.1.1`
+4. **SDK Status Note**:
+   - The project uses `google-generativeai` (v0.8.6). Google has announced deprecation in favor of `google.genai`. Whether to migrate the SDK has been left as Harshit's architectural decision after reviewing current Google documentation.
+5. **Verification (`test_hardening.py`)**:
+   - Added `TestP6ModelDependencyReproducibility`: tested `GEMINI_MODEL` env override and restoration, pinned status of all requirements, and logging of model name/version.
+   - Ran `test_hardening.py`: 22/22 tests passed in 2.462s.
+   - Ran `test_site_rules.py`: 50/50 tests passed in 0.025s.
+   - Ran `evaluate.py --self-test`: 23/23 assertions passed.

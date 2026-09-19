@@ -42,6 +42,8 @@ from route3_cache   import get_cache
 from route3_logger  import get_route3_logger
 from route3_verify  import capture_fullscreen
 
+_last_resolved_model_version = "NOT AVAILABLE"
+
 # ── Valid intent vocabulary (must match nlp.py + dispatch table in main.py) ────
 VALID_ACTIONS = [
     "brightness_up", "brightness_down", "set_brightness",
@@ -191,6 +193,13 @@ def _call_gemini(command:        str,
             ),
         )
         raw_text = response.text.strip()
+        global _last_resolved_model_version
+        resolved_version = "NOT AVAILABLE"
+        if hasattr(response, "model_version") and response.model_version:
+            resolved_version = str(response.model_version)
+        elif hasattr(response, "_response") and hasattr(response._response, "model_version") and response._response.model_version:
+            resolved_version = str(response._response.model_version)
+        _last_resolved_model_version = resolved_version
     except Exception as e:
         latency_ms = (time.perf_counter() - t0) * 1000
         msg = f"gemini_api_error: {e}"
@@ -334,6 +343,8 @@ def route3_handle(command:     str,
                 vlm_confidence = None,           # null — not a real VLM response
                 latency_ms     = latency_ms,
                 error          = "gemini_key_missing",
+                model_name     = VLM_MODEL_NAME,
+                model_version  = "NOT AVAILABLE",
             )
             return None, "gemini_key_missing", None, call_id
 
@@ -369,6 +380,8 @@ def route3_handle(command:     str,
         vlm_confidence = vlm_conf,
         latency_ms     = latency_ms,
         error          = reasoning if action in (None, "unknown") else None,
+        model_name     = VLM_MODEL_NAME,
+        model_version  = _last_resolved_model_version,
     )
 
     # ── 5. Return to caller ───────────────────────────────────────────────────

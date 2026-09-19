@@ -242,5 +242,37 @@ class TestP3DestructiveCloseRemoval(unittest.TestCase):
             mock_post_message.assert_not_called()
 
 
+import importlib
+
+class TestP6ModelDependencyReproducibility(unittest.TestCase):
+    """P6: Model and dependency reproducibility verification."""
+
+    def test_vlm_model_name_env_override(self):
+        with patch.dict(os.environ, {"GEMINI_MODEL": "gemini-test-override"}):
+            importlib.reload(route3_config)
+            self.assertEqual(route3_config.VLM_MODEL_NAME, "gemini-test-override")
+        importlib.reload(route3_config)
+        self.assertEqual(route3_config.VLM_MODEL_NAME, "gemini-flash-lite-latest")
+
+    def test_requirements_all_pinned(self):
+        req_file = os.path.join(os.path.dirname(__file__), "requirements.txt")
+        with open(req_file, "r", encoding="utf-8") as f:
+            lines = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+        for line in lines:
+            self.assertIn("==", line, f"Dependency line not pinned: {line}")
+
+    def test_route3_log_entry_records_model_name_and_version(self):
+        mock_logger = MagicMock()
+        with patch("vlm.get_route3_logger", return_value=mock_logger), \
+             patch("vlm._load_api_key", return_value=None):
+            vlm.route3_handle("test command", "open_app", 0.2, None)
+            mock_logger.log_invocation.assert_called_once()
+            _, kwargs = mock_logger.log_invocation.call_args
+            self.assertIn("model_name", kwargs)
+            self.assertEqual(kwargs["model_name"], route3_config.VLM_MODEL_NAME)
+            self.assertIn("model_version", kwargs)
+            self.assertEqual(kwargs["model_version"], "NOT AVAILABLE")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

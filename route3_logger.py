@@ -20,7 +20,7 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
-from route3_config import ROUTE3_LOG_DIR
+from route3_config import ROUTE3_LOG_DIR, VLM_MODEL_NAME
 
 
 class Route3Logger:
@@ -56,7 +56,9 @@ class Route3Logger:
                        reasoning:     str | None  = None,
                        vlm_confidence: float | None = None,
                        latency_ms:    float,
-                       error:         str | None  = None) -> None:
+                       error:         str | None  = None,
+                       model_name:    str | None  = None,
+                       model_version: str | None  = None) -> None:
         """Log a Route 3 invocation (pre-dispatch)."""
         entry = {
             "type":            "invocation",
@@ -70,6 +72,8 @@ class Route3Logger:
             "action_taken":    action_taken,
             "target_taken":    str(target_taken) if target_taken is not None else None,
             "latency_ms":      round(float(latency_ms), 1),
+            "model_name":      model_name if model_name is not None else VLM_MODEL_NAME,
+            "model_version":   model_version if model_version is not None else "NOT AVAILABLE",
         }
         if reasoning      is not None: entry["reasoning"]       = reasoning
         if vlm_confidence is not None: entry["vlm_confidence"]  = round(float(vlm_confidence), 4)
@@ -81,7 +85,8 @@ class Route3Logger:
                          verification_outcome: str,
                          change_pct:           float,
                          polls_taken:          int  | None = None,
-                         time_to_stable_ms:    int  | None = None) -> None:
+                         time_to_stable_ms:    int  | None = None,
+                         model_name:           str  | None = None) -> None:
         """Log the post-action verification outcome (after dispatch).
 
         polls_taken       : total poll iterations the adaptive loop executed
@@ -94,6 +99,7 @@ class Route3Logger:
             "call_id":              call_id,
             "verification_outcome": verification_outcome,
             "change_pct":           round(float(change_pct), 4),
+            "model_name":           model_name if model_name is not None else VLM_MODEL_NAME,
         }
         if polls_taken       is not None: entry["polls_taken"]        = int(polls_taken)
         if time_to_stable_ms is not None: entry["time_to_stable_ms"]  = int(time_to_stable_ms)

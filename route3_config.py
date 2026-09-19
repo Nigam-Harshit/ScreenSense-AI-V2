@@ -8,6 +8,8 @@ Feature flags can be set to False for controlled ablation testing
 (mirrors the ablation study approach used for the NLP classifier).
 """
 
+import os
+
 # ── Feature flags ──────────────────────────────────────────────────────────────
 ROUTE3_CACHE_ENABLED   = True    # Set False to disable semantic cache (ablation)
 ROUTE3_VERIFY_ENABLED  = True    # Set False to disable screenshot-diff verification
@@ -59,12 +61,8 @@ VERIFY_UNEXPECTED_THRESHOLD = 0.50
 
 # ── Gemini VLM ─────────────────────────────────────────────────────────────────
 # Model to call for vision-language fallback.
-# Chosen: gemini-2.0-flash for speed and cost.  PENDING performance review.
-VLM_MODEL_NAME = "gemini-2.0-flash"
-# Chosen: gemini-flash-latest for speed and cost.  PENDING performance review.
-VLM_MODEL_NAME = "gemini-flash-latest"
-# Chosen: gemini-flash-lite-latest for speed, cost, and fresh per-model free-tier quota.
-VLM_MODEL_NAME = "gemini-flash-lite-latest"
+# Configurable via GEMINI_MODEL env var (defaults to gemini-flash-lite-latest).
+VLM_MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 
 # Environment variable (or .env key) holding the Gemini API key.
 VLM_API_KEY_ENV = "GEMINI_API_KEY"
