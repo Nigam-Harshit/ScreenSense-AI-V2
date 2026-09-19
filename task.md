@@ -206,3 +206,25 @@ ey verification + `open_app(None)` defensive guard).
    - Verified all 5 failure modes: no dispatch, no cache write.
    - Verified disruptive triggers gate: `"tap on the blue thing"` -> `lock_screen` refused; `"lock my screen"` allowed.
    - Ran `test_hardening.py`: 9/9 tests passed in 5.38s.
+
+## Session Record: 2026-09-20 (Brief C — P2: Cache Key Grounding & Screen Matching)
+
+### Objectives
+- Enforce strict cache key matching in `route3_cache.py` requiring exact normalized command text match, perceptual screen hash Hamming distance <= 12 bits (`CACHE_HASH_MAX_HAMMING`), and classifier action hint intent match.
+- Ensure `display_unavailable` never matches and results under it are never stored.
+- Retain semantic command similarity path behind `CACHE_SEMANTIC_ENABLED = False` requiring similarity >= `CACHE_SEMANTIC_MIN_SIM = 0.92`.
+- Update option comments in `route3_config.py` reflecting the enforced screen-hash and command matching policy alongside session-only storage.
+
+### Execution Summary & Evidence
+1. **Configuration (`route3_config.py`)**:
+   - Added `CACHE_HASH_MAX_HAMMING = 12`, `CACHE_SEMANTIC_ENABLED = False`, `CACHE_SEMANTIC_MIN_SIM = 0.92`.
+   - Updated cache invalidation & matching design documentation in `route3_config.py`.
+2. **Cache Implementation (`route3_cache.py`)**:
+   - Added `_hamming_distance(h1, h2)` computing XOR bit difference on 32-hex perceptual hashes, returning 999999 on invalid hashes or `display_unavailable`.
+   - Updated `SemanticCache.store()`: rejects `display_unavailable` or empty hashes; stores normalized command, screen hash, action, target, response, and optional command embedding.
+   - Updated `SemanticCache.query()`: requires exact normalized command match (or semantic command cosine similarity >= 0.92 when `CACHE_SEMANTIC_ENABLED=True`), screen hash Hamming distance <= 12 bits, and matching classifier action hint.
+3. **Verification (`test_hardening.py`)**:
+   - Added `TestP2CacheKeyScreenMatching`: identical hash hit (0 bits), 3-bit difference hit (3 bits), 40-bit difference miss (40 bits), `display_unavailable` query/store miss, different command miss ("close chrome" vs "close notepad" on identical screen hash), different hint intent miss, semantic path disabled by default, and semantic path verified when enabled via mock embedder.
+   - Ran `test_hardening.py`: 17/17 tests passed in 2.019s.
+   - Ran `test_site_rules.py`: 40/40 tests passed in 0.011s.
+   - Ran `evaluate.py --self-test`: 23/23 assertions passed.

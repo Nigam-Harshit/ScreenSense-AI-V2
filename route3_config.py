@@ -13,11 +13,20 @@ ROUTE3_CACHE_ENABLED   = True    # Set False to disable semantic cache (ablation
 ROUTE3_VERIFY_ENABLED  = True    # Set False to disable screenshot-diff verification
 
 # ── Semantic cache ─────────────────────────────────────────────────────────────
-# Similarity threshold for a cache hit.
-# Chosen: 0.80.  Rationale: high enough to avoid false positives on different
-# commands that happen to be textually similar; low enough to catch genuine
-# paraphrase reuse.  PENDING TUNING from real cache-hit/miss logs.
+# Similarity threshold for a cache hit (legacy default / baseline).
 CACHE_SIMILARITY_THRESHOLD = 0.80
+
+# Maximum Hamming distance (in bits) between 32-hex perceptual screen hashes.
+# Chosen: 12. PENDING TUNING.
+CACHE_HASH_MAX_HAMMING = 12
+
+# Feature flag for optional semantic similarity matching of command text.
+# Default: False (exact normalised command match required).
+CACHE_SEMANTIC_ENABLED = False
+
+# Minimum semantic similarity threshold for command text when semantic matching is enabled.
+# Chosen: 0.92. PENDING TUNING.
+CACHE_SEMANTIC_MIN_SIM = 0.92
 
 # Maximum number of entries before LRU eviction.
 # Chosen: 500.  PENDING TUNING — depends on observed command variety in practice.
@@ -74,17 +83,15 @@ DISRUPTIVE_TRIGGERS = {
 # ── Logging ────────────────────────────────────────────────────────────────────
 ROUTE3_LOG_DIR = "logs"
 
-# ── Open design question: cache invalidation / expiry ─────────────────────────
-# Screen states change between sessions.  A cached entry for "close chrome"
-# from a session where Chrome was open could fire incorrectly if Chrome is
-# not open in a new session (depending on screen hash similarity).
+# ── Cache invalidation & matching design ──────────────────────────────────────
+# Screen states change between sessions and actions. To avoid executing
+# cached actions on mismatched screen contexts or mismatched targets:
 #
-# Options (not yet decided — flagged for review once real traffic data exists):
-#   (a) Session-only cache: flush on exit.  CURRENTLY USED — safe default.
-#   (b) Time-based TTL: evict entries older than N hours.
-#   (c) Require exact screen-hash match: cache hit requires both semantic
-#       command similarity >= threshold AND identical screen hash.
-#       This is the most conservative option (effectively per-screen-state cache).
-#
-# The current implementation uses option (a).  The cache object is constructed
-# in-memory at startup and not persisted back to disk unless explicitly called.
+# Enforced matching policy (Brief C - P2):
+#   - Session-only cache: in-memory, flushed on exit (safe default).
+#   - Perceptual screen-hash matching: cache hit requires screen hash within
+#     CACHE_HASH_MAX_HAMMING = 12 bits of stored hash. 'display_unavailable' never matches.
+#   - Exact normalized command matching: command text must match stored command text exactly
+#     (or cosine similarity >= CACHE_SEMANTIC_MIN_SIM = 0.92 on command text alone
+#     if CACHE_SEMANTIC_ENABLED = True).
+#   - Classifier hint intent match: stored action must equal current classifier action_hint.
