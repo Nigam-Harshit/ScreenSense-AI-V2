@@ -440,7 +440,10 @@ def _run_action(command, action, target, confidence, route, log_entry):
             return
 
         if action is None:
-            log_entry.mark_result("vlm_unknown")
+            print("Could not understand that command.")
+            reason = target if isinstance(target, str) else "unknown"
+            if log_entry:
+                log_entry.mark_result("route3_failed", error_msg=reason)
             return
 
     # ── Dispatch (Routes 1, 2, and VLM-resolved Route 3) ──────────────────────

@@ -184,3 +184,25 @@ ey verification + `open_app(None)` defensive guard).
    - Ran `python test_site_rules.py`: 40/40 tests passed in 0.009s.
    - Verified `evaluate.py --self-test`: 23/23 assertions passed.
    - Live browser smoke test in text mode: **NOT RUN** (as per offline unit test specification).
+
+## Session Record: 2026-09-20 (Brief C — P1: Route 3 Failure Handling & Sanity Gate)
+
+### Objectives
+- Prevent execution and caching of low-confidence guesses when Route 3 VLM calls fail (missing key, dependency missing, API error, parse error, or unrecognised action).
+- Enforce sanity gate `DISRUPTIVE_TRIGGERS` on disruptive actions (`lock_screen`, `sleep_pc`, `close_desktop`, `close_button`) refusing actions lacking raw command triggers without caching.
+- Log failures cleanly as `route3_failed` with the error reason and skip post-dispatch verification.
+
+### Execution Summary & Evidence
+1. **Configuration (`route3_config.py`)**:
+   - Added `DISRUPTIVE_TRIGGERS` defining required command keywords for disruptive actions (`lock_screen`, `sleep_pc`, `close_desktop`, `close_button`).
+2. **Refusal & Error Return Handling (`vlm.py`)**:
+   - Updated `_call_gemini()` to return `(None, None, reason, 0.0, latency)` on `ImportError`, API exceptions, and missing API keys.
+   - Updated `_parse_vlm_response()` to return `(None, None, reason, 0.0, latency)` on `json_parse_error`, `unrecognised_action`, and `vlm_unknown`.
+   - Implemented `check_disruptive_trigger(action, command)` in `vlm.py` refusing disruptive actions without trigger keywords with reason `"disruptive_action_without_trigger"`.
+   - Prevented cache writes on all `None`, `"unknown"`, and refusal outcomes.
+3. **Router Handling (`main.py`)**:
+   - Updated `_run_action()` when `action is None`: prints `"Could not understand that command."`, records `log_entry.mark_result("route3_failed", error_msg=reason)`, and returns immediately without dispatching or running post-action verification.
+4. **Verification (`test_hardening.py`)**:
+   - Verified all 5 failure modes: no dispatch, no cache write.
+   - Verified disruptive triggers gate: `"tap on the blue thing"` -> `lock_screen` refused; `"lock my screen"` allowed.
+   - Ran `test_hardening.py`: 9/9 tests passed in 5.38s.

@@ -60,6 +60,17 @@ VLM_MODEL_NAME = "gemini-flash-lite-latest"
 # Environment variable (or .env key) holding the Gemini API key.
 VLM_API_KEY_ENV = "GEMINI_API_KEY"
 
+# ── Disruptive action triggers ────────────────────────────────────────────────
+# Actions that can significantly disrupt the user's session must only be accepted
+# from Route 3 if the raw command text contains at least one required trigger.
+# For multi-token requirements (e.g. close_desktop), all required tokens must be present.
+DISRUPTIVE_TRIGGERS = {
+    "lock_screen": ("lock",),
+    "sleep_pc": ("sleep", "hibernate", "suspend"),
+    "close_desktop": (("close", "desktop"),),
+    "close_button": ("close", "exit", "quit"),
+}
+
 # ── Logging ────────────────────────────────────────────────────────────────────
 ROUTE3_LOG_DIR = "logs"
 
