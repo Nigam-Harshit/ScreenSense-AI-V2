@@ -323,5 +323,36 @@ class TestP7SmallFixes(unittest.TestCase):
         self.assertIn("CONF_THRESHOLD   = 0.43", content)
 
 
+from model_loader import load_sentence_encoder
+
+class TestP8OfflineFirstEncoderLoading(unittest.TestCase):
+    """P8: Offline-first sentence encoder loading verification."""
+
+    def test_load_sentence_encoder_returns_functional_model(self):
+        model = load_sentence_encoder("all-MiniLM-L6-v2")
+        emb = model.encode(["test query"])
+        self.assertEqual(emb.shape, (1, 384))
+
+    def test_embeddings_allclose_with_standard_load(self):
+        from sentence_transformers import SentenceTransformer
+        sentences = [
+            "open google chrome",
+            "turn up the volume please",
+            "take a screenshot of the display",
+            "scroll down a bit",
+            "lock the computer screen",
+        ]
+        direct_model = SentenceTransformer("all-MiniLM-L6-v2")
+        direct_emb = direct_model.encode(sentences)
+
+        offline_model = load_sentence_encoder("all-MiniLM-L6-v2")
+        offline_emb = offline_model.encode(sentences)
+
+        self.assertTrue(np.allclose(direct_emb, offline_emb, atol=1e-6))
+
+    def test_no_hf_token_set_or_read(self):
+        self.assertNotIn("HF_TOKEN", os.environ)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

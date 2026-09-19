@@ -37,8 +37,8 @@ _encoder = None
 def _get_encoder():
     global _encoder
     if _encoder is None:
-        from sentence_transformers import SentenceTransformer
-        _encoder = SentenceTransformer("all-MiniLM-L6-v2")
+        from model_loader import load_sentence_encoder
+        _encoder = load_sentence_encoder("all-MiniLM-L6-v2")
     return _encoder
 
 

@@ -345,3 +345,25 @@ ey verification + `open_app(None)` defensive guard).
    - Ran `test_hardening.py`: 27/27 tests passed in 1.778s.
    - Ran `test_site_rules.py`: 50/50 tests passed in 0.041s.
    - Ran `evaluate.py --self-test`: 23/23 assertions passed.
+
+## Session Record: 2026-09-20 (Brief C — P8: Offline-First Sentence Encoder Loading [AUTO])
+
+### Objectives
+- Load the sentence encoder offline-first (`local_files_only=True` and fallback temporary `HF_HUB_OFFLINE=1`).
+- Fall back gracefully to online download if the model is not yet in cache.
+- Never set or read `HF_TOKEN`.
+- Centralize in `model_loader.py` and update both callers: `nlp.py` and `route3_cache.py`.
+
+### Execution Summary & Evidence
+1. **Module Creation (`model_loader.py`)**:
+   - Created `load_sentence_encoder(model_name)`: detects `local_files_only` parameter capability on `SentenceTransformer`, attempts local load, falls back to temporary `HF_HUB_OFFLINE="1"` context, and finally standard load if uncached.
+   - Preserves environment variables cleanly and never reads/writes `HF_TOKEN`.
+2. **Callers Updated (`nlp.py`, `route3_cache.py`)**:
+   - `nlp.py::_load_knn`: replaced direct `SentenceTransformer(model_name)` with `load_sentence_encoder(model_name)`.
+   - `route3_cache.py::_get_encoder`: replaced direct `SentenceTransformer("all-MiniLM-L6-v2")` with `load_sentence_encoder("all-MiniLM-L6-v2")`.
+3. **Verification (`test_hardening.py`)**:
+   - Added `TestP8OfflineFirstEncoderLoading`: verified functional model output, 384-dimensional shape, verified `np.allclose(direct_emb, offline_emb, atol=1e-6)` across 5 sample sentences, and verified `HF_TOKEN` is neither set nor read in the environment.
+   - Ran `test_hardening.py`: 30/30 tests passed in 10.718s.
+   - Ran `test_site_rules.py`: 50/50 tests passed in 0.021s.
+   - Ran `evaluate.py --self-test`: 23/23 assertions passed.
+

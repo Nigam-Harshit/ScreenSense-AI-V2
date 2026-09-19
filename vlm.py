@@ -73,7 +73,6 @@ Based on what you see AND what the user said, determine the single best action.
 Respond with ONLY valid JSON — no markdown fences, no commentary:
 {{
   "action": "<one of the valid actions>",
-  "target": "<app name | number | text | null>",
   "target": "<app name | number | text | [x, y] coordinates | null>",
   "reasoning": "<one sentence>",
   "confidence": <0.0 to 1.0>
@@ -156,7 +155,6 @@ def _call_gemini(command:        str,
         print(f"[VLM] {msg}")
         return None, None, msg, 0.0, 0.0
 
-    genai.configure(api_key=api_key)
     genai.configure(api_key=api_key, transport="rest")
     model = genai.GenerativeModel(VLM_MODEL_NAME)
 
@@ -213,7 +211,6 @@ def _call_gemini(command:        str,
 def _parse_vlm_response(raw_text: str, action_hint: str, latency_ms: float = 0.0):
     # Parse JSON — handle markdown fences if Gemini wraps the output
     try:
-        clean = raw_text
         clean = raw_text.strip()
         if clean.startswith("```"):
             parts_md = clean.split("```")
@@ -300,7 +297,6 @@ def route3_handle(command:     str,
     cached_resp = None
     if ROUTE3_CACHE_ENABLED:
         cache      = get_cache()
-        cache_hit, cached_resp = cache.query(command, screen_hash)
         cache_hit, cached_resp = cache.query(command, screen_hash, action_hint=action_hint)
 
     # ── 3a. Cache hit: reuse cached response ──────────────────────────────────
@@ -348,6 +344,7 @@ def route3_handle(command:     str,
             )
             return None, "gemini_key_missing", None, call_id
 
+        # Store in cache if the action is real (not 'unknown')
         # Sanity gate on disruptive actions
         if action not in (None, "unknown"):
             allowed, refuse_reason = check_disruptive_trigger(action, command)

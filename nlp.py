@@ -39,7 +39,7 @@ def _load_knn():
     if not all(os.path.exists(p) for p in [KNN_EMB_PATH, KNN_LBL_PATH, KNN_META_PATH]):
         return False
     try:
-        from sentence_transformers import SentenceTransformer
+        from model_loader import load_sentence_encoder
         _knn_embeddings = np.load(KNN_EMB_PATH)
         with open(KNN_LBL_PATH) as f:
             _knn_labels = json.load(f)
@@ -47,7 +47,7 @@ def _load_knn():
             meta = json.load(f)
         _knn_k = meta.get("k", 7)
         model_name = meta.get("model", "all-MiniLM-L6-v2")
-        _knn_encoder = SentenceTransformer(model_name)
+        _knn_encoder = load_sentence_encoder(model_name)
         _using_knn = True
         return True
     except Exception as e:
